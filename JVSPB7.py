@@ -205,7 +205,6 @@ if uploaded_files:
 # ---- Queue / Cart panel ----
 from streamlit_sortables import sort_items
 import streamlit as st
-import uuid
 
 st.markdown("---")
 st.subheader("Queue")
@@ -213,7 +212,7 @@ st.subheader("Queue")
 if not st.session_state.queue and not st.session_state.uploads:
     st.write("No items in the queue yet.")
 else:
-    # --- Build list for sorting ---
+    # Build list to display: library items first, then uploads
     queue_display = []
     for item in st.session_state.queue:
         queue_display.append(f"{item['Model']} ({item['Category']} – {item['Subcategory']})")
@@ -222,44 +221,28 @@ else:
 
     st.markdown("### Drag to reorder or remove items")
 
-    # --- Construct HTML blocks with remove buttons ---
-    html_blocks = []
-    for name in queue_display:
-        safe_id = str(uuid.uuid4())  # unique id for remove button
-        html_blocks.append(
-            f"""
-            <div style='display:flex; justify-content:space-between; align-items:center; padding:6px 10px; 
-                        border:1px solid #ddd; border-radius:6px; margin-bottom:4px; background-color:#fafafa;'>
-                <span>{name}</span>
-                <form action="" method="post">
-                    <button type="submit" name="remove" value="{name}" 
-                        style="background-color:#bc141b; color:white; border:none; border-radius:4px; 
-                               padding:2px 8px; cursor:pointer; font-size:12px;">
-                        ❌
-                    </button>
-                </form>
-            </div>
-            """
-        )
+    # Layout: left = draggable chips, right = remove buttons aligned by row
+    left, right = st.columns([6, 1])
 
-    # --- Render sortable list ---
-    sorted_html = sort_items(html_blocks, direction="vertical", key="queue_sort", style={"background": "#fff"})
+    # --- LEFT: render draggable list and get new order ---
+    with left:
+        sorted_items = sort_items(queue_display, direction="vertical", key="queue_sort")
 
-    # --- Detect remove clicks ---
-    remove_trigger = st.session_state.get("remove_trigger", None)
-    remove_val = st.query_params.get("remove")
-    if remove_val:
-        remove_trigger = remove_val
-        st.session_state["remove_trigger"] = None  # reset
-        st.experimental_rerun()
-
-    # --- Process new order ---
+    # --- RIGHT: render ONLY remove buttons (no duplicate names) ---
+    # Keep lists we'll rebuild in the selected order, minus removals
     new_queue, new_uploads = [], []
-    for block in sorted_html:
-        # Extract plain item name
-        name = block.split("<span>")[1].split("</span>")[0]
-        if name == remove_trigger:
-            continue  # skip removed item
+    removed_names = set()
+
+    with right:
+        st.write("")  # spacer to align with top
+        for name in sorted_items:
+            if st.button("🗑️", key=f"remove_{name}"):
+                removed_names.add(name)
+
+    # Rebuild ordered lists after removals
+    for name in sorted_items:
+        if name in removed_names:
+            continue
         if name.startswith("📄"):
             file_name = name.replace("📄 ", "")
             match = next((f for f in st.session_state.uploads if f.name == file_name), None)
@@ -271,16 +254,16 @@ else:
             if match:
                 new_queue.append(match)
 
-    # --- Update app state ---
+    # Save back to session state
     st.session_state.queue = new_queue
     st.session_state.uploads = new_uploads
 
-    # --- Clear Entire Queue button ---
+    # Clear all
     st.markdown("---")
     if st.button("Clear All Files"):
         st.session_state.queue = []
         st.session_state.uploads = []
-        st.success("Queue Cleared")
+        st.success("All Files Cleared")
 
 # ---- Audience selection ----
 st.markdown("Customer Type:")
