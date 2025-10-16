@@ -215,17 +215,17 @@ st.session_state.setdefault("queue", [])
 st.session_state.setdefault("uploads", [])
 
 # Build display list (add a tiny unique token so duplicates don't collapse)
-display_rows = []   # strings shown to the user + a hidden token we strip later
+display_rows = []   # visible text + hidden unique ID
 index = 0
 
 for q in st.session_state.queue:
     index += 1
-    # Example: "⋮⋮ S-100CG [#1]" instead of full category/subcategory
-    display_rows.append(f"⋮⋮ {q['Model']} [#{index}]")
+    # Invisible ID added using zero-width characters
+    display_rows.append(f"⋮⋮ {q['Model']}\u200B{index}")
 
 for up in st.session_state.uploads:
     index += 1
-    display_rows.append(f"⋮⋮ 📄 {up.name} [#{index}]")
+    display_rows.append(f"⋮⋮ 📄 {up.name}\u200B{index}")
 
 if not display_rows:
     st.info("No items in the queue yet.")
