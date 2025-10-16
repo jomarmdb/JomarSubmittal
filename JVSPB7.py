@@ -3,18 +3,50 @@ import pandas as pd
 import requests
 from io import BytesIO
 from PyPDF2 import PdfMerger
-from datetime import datetime
-import tempfile, os, re
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.utils import ImageReader
-from streamlit_sortables import sort_items
+from datetime import datetime
+from pathlib import Path
+import tempfile, os
 
-# =========================
-# PDF Cover Page (Jomar style)
-# =========================
+# =====================================================
+# Drag & drop ordering (with fallback if package missing)
+# =====================================================
+def _get_sort_labels_fn():
+    try:
+        from streamlit_sortables import sort_items
+        def sort_labels(labels, key="file_order"):
+            st.markdown("**Click & Drag to set the order of spec sheets (Cover page stays first):**")
+            return sort_items(labels, direction="vertical", multi_containers=False, key=key)
+        return sort_labels
+    except Exception:
+        pass
+
+    # Fallback: numeric ordering inputs
+    def sort_labels(labels, key="file_order"):
+        st.info("Drag component not available. Enter desired order numbers (1..N).")
+        orders = []
+        for i, name in enumerate(labels):
+            cols = st.columns([1, 6])
+            with cols[0]:
+                o = st.number_input(
+                    "Order", min_value=1, max_value=len(labels),
+                    value=i+1, key=f"ord_{key}_{i}", label_visibility="collapsed"
+                )
+            with cols[1]:
+                st.write(name)
+            orders.append((o, name))
+        orders.sort(key=lambda t: t[0])
+        return [name for _, name in orders]
+    return sort_labels
+
+sort_labels = _get_sort_labels_fn()
+
+# =====================================================
+# Helpers for cover page (kept from your working version)
+# =====================================================
 def hex_to_rgb01(hex_color: str):
     h = hex_color.strip().lstrip("#")
     r = int(h[0:2], 16) / 255.0
@@ -22,14 +54,25 @@ def hex_to_rgb01(hex_color: str):
     b = int(h[4:6], 16) / 255.0
     return r, g, b
 
-def try_register_font(ttf_path: str, face_name: str):
-    if ttf_path and os.path.exists(ttf_path):
-        try:
-            pdfmetrics.registerFont(TTFont(face_name, ttf_path))
-            return face_name
-        except Exception:
-            pass
-    return "Helvetica"
+def fit_multiline_text(lines, font_name, bar_width, bar_height,
+                       side_pad=48, v_pad=18,
+                       max_pt=36, min_pt=14,
+                       leading_factor=1.12, letter_spacing=0.0):
+    safe_w = max(bar_width - 2*side_pad, 1)
+    safe_h = max(bar_height - 2*v_pad, 1)
+    caps = []
+    for txt in lines:
+        if not txt:
+            continue
+        base_w_at_1pt = pdfmetrics.stringWidth(txt, font_name, 1.0)
+        if base_w_at_1pt > 0:
+            caps.append(safe_w / base_w_at_1pt)
+    width_cap = min(caps) if caps else max_pt
+    n = len(lines)
+    height_cap = (safe_h / ((n - 1) * leading_factor)) if n > 1 else max_pt
+    size = max(min(width_cap, height_cap, max_pt), min_pt)
+    leading = size * leading_factor
+    return [size] * n, leading
 
 def draw_logo_centered_between_page_top_and_bar_top(c, logo_path, max_width, page_width, page_height, bar_top_y):
     img = ImageReader(logo_path)
@@ -42,6 +85,83 @@ def draw_logo_centered_between_page_top_and_bar_top(c, logo_path, max_width, pag
     y = desired_center_y - (h / 2.0)
     y = min(y, page_height - h - 24)
     c.drawImage(logo_path, x, y, width=w, height=h, preserveAspectRatio=True, mask='auto')
+    return h
+
+def draw_centered_stack(
+    c, x_center, y_center, lines, sizes, font_name, color_rgb, leading=26, letter_spacing=0.0, optical_adjust=0.0
+):
+    if not lines:
+        return
+    asc_u = pdfmetrics.getAscent(font_name) / 1000.0
+    des_u = abs(pdfmetrics.getDescent(font_name) / 1000.0)
+    asc0      = asc_u * sizes[0]
+    des_last  = des_u * sizes[-1]
+    interline = leading * (len(lines) - 1)
+    block_h = asc0 + interline + des_last
+    first_baseline_y = y_center + (block_h / 2.0) - asc0 + optical_adjust
+
+    c.setFillColorRGB(*color_rgb)
+    for i, (txt, sz) in enumerate(zip(lines, sizes)):
+        y = first_baseline_y - i * leading
+        c.setFont(font_name, sz)
+        if letter_spacing and letter_spacing > 0:
+            n_gaps = max(len(txt) - 1, 0)
+            base_w = pdfmetrics.stringWidth(txt, font_name, sz)
+            w = base_w + letter_spacing * n_gaps
+            x_left = x_center - (w / 2.0)
+            t = c.beginText()
+            t.setTextOrigin(x_left, y)
+            t.setFont(font_name, sz)
+            try:
+                t.setCharSpace(letter_spacing)
+            except Exception:
+                pass
+            t.textLine(txt)
+            c.drawText(t)
+        else:
+            c.drawCentredString(x_center, y, txt)
+
+def format_mdY(d, blank="To Be Confirmed"):
+    if not d:
+        return blank
+    return f"{d.month}/{d.day}/{d.year}"
+
+def role_checkbox_group(key_prefix="role"):
+    roles = ["Contractor", "Engineer", "Distributor", "Utility"]
+    keys = [f"{key_prefix}_{r.lower()}" for r in roles]
+    def _set_only(this_key):
+        for k in keys:
+            if k != this_key:
+                st.session_state[k] = False
+    cols = st.columns(len(roles))
+    for r, k, col in zip(roles, keys, cols):
+        with col:
+            st.checkbox(r, key=k, on_change=_set_only, args=(k,))
+    for r, k in zip(roles, keys):
+        if st.session_state.get(k):
+            return r
+    return None
+
+def bid_date_picker_with_flags(label: str, key: str):
+    tbc_key, na_key = f"{key}_tbc", f"{key}_na"
+    def _on_tbc_change():
+        if st.session_state.get(tbc_key, False):
+            st.session_state[na_key] = False
+    def _on_na_change():
+        if st.session_state.get(na_key, False):
+            st.session_state[tbc_key] = False
+    disabled = st.session_state.get(tbc_key, False) or st.session_state.get(na_key, False)
+    date_val = st.date_input(label, key=f"{key}_date", disabled=disabled)
+    cols = st.columns(2)
+    with cols[0]:
+        st.checkbox("Bid Date To Be Confirmed", key=tbc_key, on_change=_on_tbc_change)
+    with cols[1]:
+        st.checkbox("Bid Date Not Applicable",  key=na_key,  on_change=_on_na_change)
+    tbc_state = st.session_state.get(tbc_key, False)
+    na_state  = st.session_state.get(na_key,  False)
+    if tbc_state or na_state:
+        date_val = None
+    return date_val, tbc_state, na_state
 
 def make_cover_pdf(
     outfile: str,
@@ -58,17 +178,16 @@ def make_cover_pdf(
     c = canvas.Canvas(outfile, pagesize=letter)
     width, height = letter
 
-    # Fonts (built-in)
     FONT_TITLE = "Helvetica"
     FONT_TEXT  = "Helvetica"
 
-    # ---- Light gray inner border ----
+    # Light gray inner border
     border_inset = 36
     c.setLineWidth(1)
     c.setStrokeColorRGB(*hex_to_rgb01("#D9D9D9"))
     c.rect(border_inset, border_inset, width - 2*border_inset, height - 2*border_inset, stroke=1, fill=0)
 
-    # ---- Red bar ----
+    # Jomar Red bar
     BAR_COLOR  = "#BC141B"
     bar_rgb    = hex_to_rgb01(BAR_COLOR)
     bar_height = 140
@@ -79,7 +198,7 @@ def make_cover_pdf(
     c.setStrokeColorRGB(*bar_rgb)
     c.rect(0, bar_y, width, bar_height, stroke=0, fill=1)
 
-    # ---- Logo: centered between page top and bar top ----
+    # Logo between page top and bar top
     if logo_path and os.path.exists(logo_path):
         try:
             draw_logo_centered_between_page_top_and_bar_top(
@@ -91,7 +210,7 @@ def make_cover_pdf(
     else:
         st.warning(f"Logo file not found at: {logo_path}")
 
-    # ---- Title inside the bar (auto-scaling to fit) ----
+    # Title inside the bar (auto-scaling to fit)
     title_lines = [
         (project_name or "TO BE CONFIRMED").upper(),
         (project_location or "TO BE CONFIRMED").upper(),
@@ -120,40 +239,118 @@ def make_cover_pdf(
         leading=dyn_leading,
     )
 
-
-    # ---- Bottom text block ----
+    # Bottom centered lines
     c.setFillColorRGB(0, 0, 0)
-    c.setFont("Helvetica", 12)
-    bottom_y = 140
+    bottom_block_y = 140
 
-    contractor_txt = (contractor or "TO BE CONFIRMED").upper()
-    dp = date_prepared.strftime("%-m/%-d/%Y") if date_prepared else "TO BE CONFIRMED"
-    bd = bid_date.strftime("%-m/%-d/%Y") if bid_date else "TO BE CONFIRMED"
+    role_label  = (party_label or "Recipient").upper()
+    company_txt = (party_name or "To Be Confirmed").upper()
+    first_line  = f"{role_label}: {company_txt}"
 
-    lines = [
-        f"CONTRACTOR: {contractor_txt}",
-        f"DATE PREPARED: {dp.upper()}",
-        f"BID DATE: {bd.upper()}",
-    ]
+    date_prep_txt = format_mdY(date_prepared, blank="To Be Confirmed").upper()
 
-    line_height = 18
-    for i, text in enumerate(lines):
-        c.drawCentredString(width / 2, bottom_y - (i * line_height), text)
+    lines_bottom = [first_line, f"DATE PREPARED: {date_prep_txt}"]
+
+    if not bid_date_na:
+        if bid_date_tbc or not bid_date:
+            lines_bottom.append("BID DATE: TO BE CONFIRMED")
+        else:
+            lines_bottom.append(f"BID DATE: {format_mdY(bid_date).upper()}")
+
+    draw_centered_stack(
+        c,
+        x_center=width / 2.0,
+        y_center=bottom_block_y,
+        lines=lines_bottom,
+        sizes=[12] * len(lines_bottom),
+        font_name=FONT_TEXT,
+        color_rgb=(0, 0, 0),
+        leading=18,
+    )
 
     c.showPage()
     c.save()
 
-
-# =========================
-# App Configuration
-# =========================
+# =====================================================
+# App UI
+# =====================================================
 st.set_page_config(page_title="Jomar Spec Sheet Combiner", layout="wide")
-st.title("Valve Spec Sheet Combiner — Catalog View")
-st.caption("Select by Category → Subcategory → Product. Add uploads, manage a queue, and generate a combined PDF with a Jomar-styled cover.")
+st.title("Jomar Valve Submittal Package Builder")
+st.caption("Upload PDFs and/or select from catalog, reorder in the sidebar, then generate a combined PDF with a custom cover.")
+
+# Resolve app dir + default logo path (next to this file)
+APP_DIR = Path(__file__).parent
+LOGO_FILENAME = "Jomar Valve Logo Red.png"  # update if your file name differs
+default_logo_path = str(APP_DIR / LOGO_FILENAME)
+
+# ---------------- Session State ----------------
+st.session_state.setdefault("queue", [])     # list of file-like objects; each must have .name
+st.session_state.setdefault("uploads", [])   # keep track of uploaded files separately (optional)
+st.session_state.setdefault("selected_category", None)
+st.session_state.setdefault("selected_subcategory", None)
+
+# ---------------- Sidebar: Queue ----------------
+with st.sidebar:
+    st.markdown("**Selected Spec Sheets**")
+
+    # Build labels from queue (one unified list)
+    labels = [getattr(f, "name", "Unnamed.pdf") for f in st.session_state.queue]
+
+    if not labels:
+        st.info("No files selected yet.")
+    else:
+        # Drag & drop (or fallback numeric UI)
+        ordered_labels = sort_labels([f"⋮⋮ {nm}" for nm in labels], key="sidebar_sort")
+
+        # Map back to objects, supporting duplicates by consuming indices
+        raw_labels = [nm.replace("⋮⋮", "").strip() for nm in ordered_labels]
+        name_to_idxs = {}
+        for i, nm in enumerate(labels):
+            name_to_idxs.setdefault(nm, []).append(i)
+
+        new_queue = []
+        for nm in raw_labels:
+            if nm in name_to_idxs and name_to_idxs[nm]:
+                idx = name_to_idxs[nm].pop(0)
+                new_queue.append(st.session_state.queue[idx])
+
+        # Save reordered list
+        st.session_state.queue = new_queue
+
+        st.markdown("---")
+        if st.button("Clear All Files", use_container_width=True):
+            st.session_state.queue.clear()
+            st.session_state.uploads.clear()
+            st.toast("Cleared all queued files.")
+            st.rerun()
+
+# ---------------- Uploader ----------------
+st.subheader("Upload Spec Sheets")
+uploaded_files = st.file_uploader(
+    "Add PDF spec sheets (these will appear in the sidebar queue):",
+    type="pdf",
+    accept_multiple_files=True
+)
+
+if uploaded_files:
+    # Avoid duplicates by (name, size)
+    existing = {(getattr(f, "name", ""), getattr(f, "size", None)) for f in st.session_state.queue}
+    new_count = 0
+    for f in uploaded_files:
+        key = (f.name, getattr(f, "size", None))
+        if key not in existing:
+            st.session_state.queue.append(f)
+            st.session_state.uploads.append(f)
+            existing.add(key)
+            new_count += 1
+    if new_count:
+        st.success(f"✓ Added {new_count} uploaded file(s) to queue.")
+
+# ---------------- Catalog View ----------------
+st.markdown("---")
+st.subheader("Catalog View — Select Spec Sheets from Jomar Library")
 
 EXCEL_PATH = "spec_links_images.xlsx"
-DEFAULT_LOGO_PATH = r"C:\Users\matt.bianchi\OneDrive - jomar.com\Jomar\Specification Sales\Projects\Spec Package Builder\App\Current2\Jomar Valve Logo Red.png"
-PROXIMA_TTF = ""
 
 @st.cache_data(show_spinner=False)
 def load_library(xlsx_path):
@@ -161,7 +358,7 @@ def load_library(xlsx_path):
     expected = {"Category","Subcategory","Model","Description","URL","Image"}
     missing = [c for c in expected if c not in df.columns]
     if missing:
-        raise ValueError(f"Missing required columns: {missing}")
+        raise ValueError(f"Missing columns in Excel: {missing}")
     return df.dropna(subset=["Model","URL"]).copy()
 
 try:
@@ -169,67 +366,6 @@ try:
 except Exception as e:
     st.error(f"Unable to load Excel: {e}")
     st.stop()
-
-st.session_state.setdefault("queue", [])
-st.session_state.setdefault("uploads", [])
-
-# =========================
-# Sidebar: Queue / Cart
-# =========================
-with st.sidebar:
-    st.markdown("Selected Spec Sheets")
-
-    # Build the drag/drop list from current queue + uploads
-    display_rows = []
-    for q in st.session_state.queue:
-        display_rows.append(f"⋮⋮ {q['Model']}")
-    for up in st.session_state.uploads:
-        display_rows.append(f"⋮⋮ 📄 {up.name}")
-
-    if not display_rows:
-        st.info("No items selected yet.")
-    else:
-        st.markdown("Click & Drag to Reorder")
-
-        # Dynamically render drag/drop list
-        sorted_items = sort_items(display_rows, direction="vertical", key="queue_sort_sidebar")
-
-        # Rebuild queue order from sorted items
-        new_queue, new_uploads = [], []
-        for entry in sorted_items:
-            name = entry.replace("⋮⋮", "").strip()
-            if name.startswith("📄 "):
-                file_name = name.replace("📄 ", "")
-                match = next((f for f in st.session_state.uploads if f.name == file_name), None)
-                if match:
-                    new_uploads.append(match)
-            else:
-                model = name.strip()
-                match = next((q for q in st.session_state.queue if q["Model"] == model), None)
-                if match:
-                    new_queue.append(match)
-
-        # ✅ Update queue AFTER the for-loop (important!)
-        st.session_state.queue = new_queue
-        st.session_state.uploads = new_uploads
-        st.toast("✅ Selected File Added")
-
-        st.markdown("---")
-        if st.button("Clear All Files", use_container_width=True):
-            st.session_state.queue.clear()
-            st.session_state.uploads.clear()
-            st.toast("All Files Cleared")
-            st.rerun()
-
-# =========================
-# Main Page
-# =========================
-
-# ---- Persistent category & subcategory selections ----
-if "selected_category" not in st.session_state:
-    st.session_state.selected_category = None
-if "selected_subcategory" not in st.session_state:
-    st.session_state.selected_subcategory = None
 
 cols = st.columns(2)
 with cols[0]:
@@ -260,7 +396,7 @@ if filtered.empty:
     st.info("No products found for this selection.")
 else:
     for _, row in filtered.iterrows():
-        c1, c2 = st.columns([1, 3], vertical_alignment="center")
+        c1, c2 = st.columns([1, 3])
         with c1:
             try:
                 st.image(row["Image"], width=110)
@@ -268,99 +404,73 @@ else:
                 st.write("No image")
         with c2:
             model = str(row["Model"])
-            url = str(row["URL"])
-            desc = str(row.get("Description", "") or "")
+            url   = str(row["URL"])
+            desc  = str(row.get("Description", "") or "")
             st.markdown(f"[**{model}**]({url})  \n{desc}")
 
-            # ✅ Stable Add button key
             add_key = f"add::{category}::{subcategory}::{model}"
             if st.button(f"Add {model}", key=add_key):
-                if not any(q["Model"] == model for q in st.session_state.queue):
-                    st.session_state.queue.append({
-                        "Category": row["Category"],
-                        "Subcategory": row["Subcategory"],
-                        "Model": model,
-                        "Description": desc,
-                        "URL": url,
-                        "Image": row["Image"]
-                    })
-                    st.toast(f"✓ Added {model}", icon="✅")
-                    st.rerun()
-                else:
+                # De-dup by file name (model.pdf)
+                target_name = f"{model}.pdf"
+                queue_names = {getattr(f, "name", "") for f in st.session_state.queue}
+                if target_name in queue_names:
                     st.toast(f"{model} is already in the queue.", icon="⚠️")
+                else:
+                    try:
+                        resp = requests.get(url, timeout=30)
+                        resp.raise_for_status()
+                        fobj = BytesIO(resp.content)
+                        fobj.name = target_name
+                        st.session_state.queue.append(fobj)
+                        st.toast(f"✓ Added {model} to queue", icon="✅")
+                        st.rerun()
+                    except Exception as e:
+                        st.warning(f"Could not add {model}: {e}")
 
-# ---- Upload PDFs ----
-st.markdown("---")
-st.subheader("Optional: Drag & Drop Additional PDFs")
-uploaded_files = st.file_uploader(
-    "Add extra PDFs (merged after the cover)",
-    type="pdf",
-    accept_multiple_files=True
-)
-if uploaded_files:
-    new_count = 0
-    existing_keys = {(f.name, f.size) for f in st.session_state.uploads}
-    for f in uploaded_files:
-        if (f.name, f.size) not in existing_keys:
-            st.session_state.uploads.append(f)
-            existing_keys.add((f.name, f.size))
-            new_count += 1
-    if new_count:
-        st.success(f"✓ Added {new_count} uploaded file(s).")
-
-# ---- Cover Page Fields ----
+# ---------------- Cover Page Inputs ----------------
 st.markdown("---")
 st.subheader("Cover Page")
-col1, col2 = st.columns(2)
-with col1:
-    project_name = st.text_input("Project Name", "")
-    contractor_name = st.text_input("Contractor", "")
-with col2:
-    project_location = st.text_input("Project Location", "")
-    date_prepared = st.date_input("Date Prepared")
-bid_date = st.date_input("Bid Date")
-logo_path = DEFAULT_LOGO_PATH
+selected_role = role_checkbox_group(key_prefix="aud")  # mutually exclusive
+party_name = st.text_input("Company", "")
 
-# ---- Generate Combined PDF ----
-if st.session_state.queue or st.session_state.uploads:
-    if st.button("Generate Combined PDF", type="primary"):
-        cover_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
-        make_cover_pdf(
-            cover_tmp.name,
-            logo_path,
-            project_name,
-            project_location,
-            contractor_name,
-            date_prepared,
-            bid_date,
-            PROXIMA_TTF,
-        )
+project_name = st.text_input("Project Name", "")
+project_location = st.text_input("Project Location", "")
 
-        merger = PdfMerger()
-        merger.append(cover_tmp.name)
+date_prepared = st.date_input("Date Prepared", key="dp_date")
+bid_date, bid_date_tbc, bid_date_na = bid_date_picker_with_flags("Bid Date", key="bd")
 
-        for item in st.session_state.queue:
-            try:
-                resp = requests.get(item["URL"], timeout=30)
-                resp.raise_for_status()
-                merger.append(BytesIO(resp.content))
-            except Exception as e:
-                st.warning(f"Could not add {item['Model']}: {e}")
+# ---------------- Generate Combined PDF ----------------
+if st.session_state.queue and st.button("Generate Combined PDF", type="primary"):
+    cover_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+    make_cover_pdf(
+        cover_tmp.name,
+        logo_path=default_logo_path,
+        project_name=project_name,
+        project_location=project_location,
+        party_label=selected_role,   # role (may be None)
+        party_name=party_name,       # company/name text
+        date_prepared=date_prepared,
+        bid_date=bid_date,
+        bid_date_tbc=bid_date_tbc,
+        bid_date_na=bid_date_na,
+    )
 
-        for up in st.session_state.uploads:
-            try:
-                merger.append(up)
-            except Exception as e:
-                st.warning(f"Could not add uploaded file {up.name}: {e}")
+    merger = PdfMerger()
+    merger.append(cover_tmp.name)
+    for f in st.session_state.queue:
+        try:
+            merger.append(f)  # UploadedFile or BytesIO; both work
+        except Exception as e:
+            st.warning(f"Could not add {getattr(f, 'name', 'file')}: {e}")
 
-        output = BytesIO()
-        merger.write(output)
-        merger.close()
-        output.seek(0)
+    out_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+    merger.write(out_tmp.name)
+    merger.close()
 
+    with open(out_tmp.name, "rb") as fh:
         st.download_button(
-            "⬇️ Download Combined PDF",
-            data=output,
+            "Download Combined PDF",
+            fh,
             file_name="Combined_Spec_Sheets.pdf",
             mime="application/pdf"
         )
