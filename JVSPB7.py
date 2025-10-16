@@ -233,7 +233,7 @@ else:
         with col1:
             st.write(name)
         with col2:
-            if st.button("X", key=f"remove_{name}"):
+            if st.button("❌", key=f"remove_{name}"):
                 # Skip re-adding (i.e., remove this item)
                 continue
 
