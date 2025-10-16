@@ -209,45 +209,69 @@ import streamlit as st
 st.markdown("---")
 st.subheader("Queue")
 
+# Safely initialize lists
+if "queue" not in st.session_state:
+    st.session_state.queue = []
+if "uploads" not in st.session_state:
+    st.session_state.uploads = []
+
 if not st.session_state.queue and not st.session_state.uploads:
-    st.write("No items in the queue yet.")
+    st.write("No Files Added")
 else:
-    # Combine queue items and uploaded PDFs into one list for sorting
+    # Build combined list for sorting
     queue_display = []
+
+    # Add library-based selections
     for item in st.session_state.queue:
-        queue_display.append(f"{item['Model']} ({item['Category']} – {item['Subcategory']})")
+        queue_display.append(
+            f"{item['Model']} ({item['Category']} – {item['Subcategory']})"
+        )
+
+    # Add any uploaded files
     for up in st.session_state.uploads:
         queue_display.append(f"📄 {up.name}")
 
+    # --- Display and reorder ---
     st.markdown("### Drag to reorder queue")
-    sorted_items = sort_items(queue_display, direction="vertical", key="queue_sort")
+    if queue_display:
+        sorted_items = sort_items(
+            queue_display, direction="vertical", key="queue_sort"
+        )
 
-    # Update the internal order to match user drag order
-    new_queue, new_uploads = [], []
-    for name in sorted_items:
-        if name.startswith("📄"):
-            file_name = name.replace("📄 ", "")
-            match = next((f for f in st.session_state.uploads if f.name == file_name), None)
-            if match:
-                new_uploads.append(match)
-        else:
-            model = name.split(" (")[0]
-            match = next((q for q in st.session_state.queue if q["Model"] == model), None)
-            if match:
-                new_queue.append(match)
+        # Rebuild order based on new sort
+        new_queue, new_uploads = [], []
+        for name in sorted_items:
+            if name.startswith("📄"):
+                file_name = name.replace("📄 ", "")
+                match = next(
+                    (f for f in st.session_state.uploads if f.name == file_name),
+                    None,
+                )
+                if match:
+                    new_uploads.append(match)
+            else:
+                model = name.split(" (")[0]
+                match = next(
+                    (q for q in st.session_state.queue if q["Model"] == model),
+                    None,
+                )
+                if match:
+                    new_queue.append(match)
 
-    st.session_state.queue = new_queue
-    st.session_state.uploads = new_uploads
+        # Save back to session state
+        st.session_state.queue = new_queue
+        st.session_state.uploads = new_uploads
+        
+    else:
+        st.info("No items to sort yet.")
 
-if st.button("Clear All Files"):
-    st.session_state.queue = []
-    st.session_state.uploads = []
-    st.session_state.cleared = True
-
-if st.session_state.get("cleared"):
-    st.success("All Files Cleared")
-    st.session_state.cleared = False
-
+    # --- Clear Entire Queue button ---
+    st.markdown("---")
+    if st.button("Clear All Files"):
+        st.session_state.queue.clear()
+        st.session_state.uploads.clear()
+        st.success("All Files Cleared")
+        st.experimental_rerun()
 # ---- Audience selection ----
 st.markdown("Customer Type:")
 col1, col2, col3, col4 = st.columns(4)
