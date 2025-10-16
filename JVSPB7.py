@@ -117,46 +117,51 @@ st.session_state.setdefault("uploads", [])
 # Sidebar: Queue / Cart
 # =========================
 with st.sidebar:
-    st.header("🧾 Spec Sheet Queue")
-    display_rows = []
+    st.header("Selected Spec Sheets")
 
+    # Build visible rows
+    display_rows = []
     for q in st.session_state.queue:
         display_rows.append(f"⋮⋮ {q['Model']}\u200b")
     for up in st.session_state.uploads:
         display_rows.append(f"⋮⋮ 📄 {up.name}\u200b")
 
     if not display_rows:
-        st.info("No items in queue yet.")
+        st.info("No items selected yet.")
     else:
         sorted_items = sort_items(display_rows, direction="vertical", key="queue_sort_sidebar")
 
-        new_queue, new_uploads = [], []
-        for entry in sorted_items:
-            name = entry.replace("⋮⋮", "").strip()
-            if name.startswith("📄 "):
-                file_name = name.replace("📄 ", "")
-                match = next((f for f in st.session_state.uploads if f.name == file_name), None)
-                if match:
-                    new_uploads.append(match)
-            else:
-                model = name.strip()
-                match = next((q for q in st.session_state.queue if q["Model"] == model), None)
-                if match:
-                    new_queue.append(match)
+        # ✅ Only rebuild queue if the sort order truly changed
+        current_order = [r.replace("⋮⋮", "").strip() for r in display_rows]
+        new_order = [r.replace("⋮⋮", "").strip() for r in sorted_items]
 
-        # ✅ Only update if user actually changed order
-        if new_queue != st.session_state.queue or new_uploads != st.session_state.uploads:
+        if new_order != current_order:
+            new_queue, new_uploads = [], []
+            for entry in sorted_items:
+                name = entry.replace("⋮⋮", "").strip()
+                if name.startswith("📄 "):
+                    file_name = name.replace("📄 ", "")
+                    match = next((f for f in st.session_state.uploads if f.name == file_name), None)
+                    if match:
+                        new_uploads.append(match)
+                else:
+                    model = name.strip()
+                    match = next((q for q in st.session_state.queue if q["Model"] == model), None)
+                    if match:
+                        new_queue.append(match)
+
             st.session_state.queue = new_queue
             st.session_state.uploads = new_uploads
+            st.toast("✅ Order updated")
 
         st.markdown("---")
-        st.markdown(f"**Items in queue:** {len(st.session_state.queue) + len(st.session_state.uploads)}")
+        st.markdown(f"Files in queue: {len(st.session_state.queue) + len(st.session_state.uploads)}")
 
-        if st.button("🗑️ Clear Queue", use_container_width=True):
+        if st.button("Clear All Files", use_container_width=True):
             st.session_state.queue.clear()
             st.session_state.uploads.clear()
             st.toast("Queue cleared")
-            st.rerun()
+            st.experimental_rerun()
 
 # =========================
 # Main Page
