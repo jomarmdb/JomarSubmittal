@@ -161,12 +161,33 @@ with st.sidebar:
 # =========================
 # Main page
 # =========================
+# ---- Persistent category & subcategory selections ----
+if "selected_category" not in st.session_state:
+    st.session_state.selected_category = None
+if "selected_subcategory" not in st.session_state:
+    st.session_state.selected_subcategory = None
+
 cols = st.columns(2)
 with cols[0]:
-    category = st.selectbox("Category", sorted(library["Category"].dropna().unique()))
+    categories = sorted(library["Category"].dropna().unique())
+    category = st.selectbox(
+        "Category",
+        categories,
+        index=categories.index(st.session_state.selected_category)
+        if st.session_state.selected_category in categories else 0,
+    )
+    st.session_state.selected_category = category
+
 with cols[1]:
     sub_df = library[library["Category"] == category]
-    subcategory = st.selectbox("Subcategory", sorted(sub_df["Subcategory"].dropna().unique()))
+    subcategories = sorted(sub_df["Subcategory"].dropna().unique())
+    subcategory = st.selectbox(
+        "Subcategory",
+        subcategories,
+        index=subcategories.index(st.session_state.selected_subcategory)
+        if st.session_state.selected_subcategory in subcategories else 0,
+    )
+    st.session_state.selected_subcategory = subcategory
 
 filtered = library[(library["Category"] == category) & (library["Subcategory"] == subcategory)]
 st.markdown("### Products")
