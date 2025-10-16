@@ -206,54 +206,70 @@ if uploaded_files:
 from streamlit_sortables import sort_items
 import streamlit as st
 import uuid
+import re
 
 st.markdown("---")
 st.subheader("Queue")
 
-# Make sure state exists
+# Ensure state exists
 st.session_state.setdefault("queue", [])
 st.session_state.setdefault("uploads", [])
 
-# Build a stable display list with unique keys
-queue_display = []
-for item in st.session_state.queue:
-    queue_display.append({
-        "label": f"{item['Model']} ({item['Category']} – {item['Subcategory']})",
-        "key": str(uuid.uuid4())
-    })
+# Build unique display labels with a short internal id
+items = []  # list of dicts: {"display": "...", "uid": "...", "kind": "lib"|"upl"}
+for q in st.session_state.queue:
+    display = f"{q['Model']} ({q['Category']} – {q['Subcategory']})"
+    items.append({"display": display, "uid": uuid.uuid4().hex[:8], "kind": "lib"})
 for up in st.session_state.uploads:
-    queue_display.append({
-        "label": f"📄 {up.name}",
-        "key": str(uuid.uuid4())
-    })
+    display = f"📄 {up.name}"
+    items.append({"display": display, "uid": uuid.uuid4().hex[:8], "kind": "upl"})
 
-if not queue_display:
+if not items:
     st.info("No items in the queue yet.")
 else:
     st.markdown("### Drag to reorder queue")
 
-    # Feed list of labels to sort_items (unique keys avoid overwrite)
-    labels = [i["label"] for i in queue_display]
-    sorted_labels = sort_items(labels, direction="vertical", key="queue_sort")
+    # Append a tiny ID token so every string is unique to the component
+    # We use a bracketed token at the end; users will see it but it keeps items distinct.
+    # If you want it subtler, use a very short token.
+    labeled = [f"{it['display']}  [id:{it['uid']}]"
+               for it in items]
 
-    # Rebuild the order only after the component returns
+    # Render sortable list
+    sorted_labeled = sort_items(labeled, direction="vertical", key="queue_sort")
+
+    # Helper to extract display + id back from the label
+    # Matches "... [id:XXXXXXXX]"
+    pat = re.compile(r"^(.*)\s+\[id:([0-9a-f]{8})\]$")
+
+    # Rebuild new order
     new_queue, new_uploads = [], []
-    for name in sorted_labels:
-        if name.startswith("📄"):
-            file_name = name.replace("📄 ", "")
+    for lab in sorted_labeled:
+        m = pat.match(lab)
+        if not m:
+            # fallback: treat as plain display label
+            display_text = lab
+            uid = None
+        else:
+            display_text, uid = m.group(1), m.group(2)
+
+        if display_text.startswith("📄 "):
+            file_name = display_text.replace("📄 ", "")
             match = next((f for f in st.session_state.uploads if f.name == file_name), None)
             if match:
                 new_uploads.append(match)
         else:
-            model = name.split(" (")[0]
+            # Map back to the original queue item by Model (left side before " (")
+            model = display_text.split(" (")[0]
             match = next((q for q in st.session_state.queue if q["Model"] == model), None)
             if match:
                 new_queue.append(match)
 
+    # Save updated order
     st.session_state.queue = new_queue
     st.session_state.uploads = new_uploads
-
-    st.toast("✅ Order saved")
+    st.success("Drag order saved.")
+    
     # --- Clear Entire Queue button ---
     st.markdown("---")
     if st.button("Clear All Files"):
@@ -261,6 +277,7 @@ else:
         st.session_state.uploads.clear()
         st.success("All Files Cleared")
         st.rerun()
+        
 # ---- Audience selection ----
 st.markdown("Customer Type:")
 col1, col2, col3, col4 = st.columns(4)
