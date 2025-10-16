@@ -410,7 +410,7 @@ else:
 
             add_key = f"add::{category}::{subcategory}::{model}"
             if st.button(f"Add {model}", key=add_key):
-                # De-dup by file name (model.pdf)
+                # Deduplicate by filename
                 target_name = f"{model}.pdf"
                 queue_names = {getattr(f, "name", "") for f in st.session_state.queue}
                 if target_name in queue_names:
@@ -423,10 +423,9 @@ else:
                         fobj.name = target_name
                         st.session_state.queue.append(fobj)
                         st.toast(f"✓ Added {model} to queue", icon="✅")
-                        st.rerun()
+                        st.rerun()   # <— this line forces sidebar to refresh
                     except Exception as e:
                         st.warning(f"Could not add {model}: {e}")
-
 # ---------------- Cover Page Inputs ----------------
 st.markdown("---")
 st.subheader("Cover Page")
