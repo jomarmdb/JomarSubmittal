@@ -110,7 +110,7 @@ st.title("Valve Spec Sheet Combiner — Catalog View")
 st.caption("Select by Category → Subcategory → Product. Add uploads, manage a queue, and generate a combined PDF with a Jomar-styled cover.")
 
 # ---- Configuration (edit these paths as needed) ----
-EXCEL_PATH = st.text_input("Excel library path (.xlsx)", "spec_sheet_library.xlsx")
+EXCEL_PATH = st.text_input("Excel library path (.xlsx)", "specs_links_images.xlsx")
 DEFAULT_LOGO_PATH = r"C:\Users\Matt.Bianchi\OneDrive - jomar.com\Jomar\Company Info\Logos\Jomar Valve Logo Red.png"
 PROXIMA_TTF = st.text_input("Optional: Proxima Nova Light .ttf path (leave blank for Helvetica)", "")
 
