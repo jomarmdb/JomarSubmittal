@@ -206,69 +206,74 @@ if uploaded_files:
 from streamlit_sortables import sort_items
 import streamlit as st
 import uuid
-import re
 
 st.markdown("---")
 st.subheader("Queue")
 
-# Ensure state exists
-st.session_state.setdefault("queue", [])
-st.session_state.setdefault("uploads", [])
-
-# Build unique display labels with a short internal id
-items = []  # list of dicts: {"display": "...", "uid": "...", "kind": "lib"|"upl"}
-for q in st.session_state.queue:
-    display = f"{q['Model']} ({q['Category']} – {q['Subcategory']})"
-    items.append({"display": display, "uid": uuid.uuid4().hex[:8], "kind": "lib"})
-for up in st.session_state.uploads:
-    display = f"📄 {up.name}"
-    items.append({"display": display, "uid": uuid.uuid4().hex[:8], "kind": "upl"})
-
-if not items:
-    st.info("No items in the queue yet.")
+if not st.session_state.queue and not st.session_state.uploads:
+    st.write("No items in the queue yet.")
 else:
-    st.markdown("### Drag to reorder queue")
+    # --- Build list for sorting ---
+    queue_display = []
+    for item in st.session_state.queue:
+        queue_display.append(f"{item['Model']} ({item['Category']} – {item['Subcategory']})")
+    for up in st.session_state.uploads:
+        queue_display.append(f"📄 {up.name}")
 
-    # Append a tiny ID token so every string is unique to the component
-    # We use a bracketed token at the end; users will see it but it keeps items distinct.
-    # If you want it subtler, use a very short token.
-    labeled = [f"{it['display']}  [id:{it['uid']}]"
-               for it in items]
+    st.markdown("### Drag to reorder or remove items")
 
-    # Render sortable list
-    sorted_labeled = sort_items(labeled, direction="vertical", key="queue_sort")
+    # --- Construct HTML blocks with remove buttons ---
+    html_blocks = []
+    for name in queue_display:
+        safe_id = str(uuid.uuid4())  # unique id for remove button
+        html_blocks.append(
+            f"""
+            <div style='display:flex; justify-content:space-between; align-items:center; padding:6px 10px; 
+                        border:1px solid #ddd; border-radius:6px; margin-bottom:4px; background-color:#fafafa;'>
+                <span>{name}</span>
+                <form action="" method="post">
+                    <button type="submit" name="remove" value="{name}" 
+                        style="background-color:#bc141b; color:white; border:none; border-radius:4px; 
+                               padding:2px 8px; cursor:pointer; font-size:12px;">
+                        ❌
+                    </button>
+                </form>
+            </div>
+            """
+        )
 
-    # Helper to extract display + id back from the label
-    # Matches "... [id:XXXXXXXX]"
-    pat = re.compile(r"^(.*)\s+\[id:([0-9a-f]{8})\]$")
+    # --- Render sortable list ---
+    sorted_html = sort_items(html_blocks, direction="vertical", key="queue_sort", style={"background": "#fff"})
 
-    # Rebuild new order
+    # --- Detect remove clicks ---
+    remove_trigger = st.session_state.get("remove_trigger", None)
+    remove_val = st.query_params.get("remove")
+    if remove_val:
+        remove_trigger = remove_val
+        st.session_state["remove_trigger"] = None  # reset
+        st.experimental_rerun()
+
+    # --- Process new order ---
     new_queue, new_uploads = [], []
-    for lab in sorted_labeled:
-        m = pat.match(lab)
-        if not m:
-            # fallback: treat as plain display label
-            display_text = lab
-            uid = None
-        else:
-            display_text, uid = m.group(1), m.group(2)
-
-        if display_text.startswith("📄 "):
-            file_name = display_text.replace("📄 ", "")
+    for block in sorted_html:
+        # Extract plain item name
+        name = block.split("<span>")[1].split("</span>")[0]
+        if name == remove_trigger:
+            continue  # skip removed item
+        if name.startswith("📄"):
+            file_name = name.replace("📄 ", "")
             match = next((f for f in st.session_state.uploads if f.name == file_name), None)
             if match:
                 new_uploads.append(match)
         else:
-            # Map back to the original queue item by Model (left side before " (")
-            model = display_text.split(" (")[0]
+            model = name.split(" (")[0]
             match = next((q for q in st.session_state.queue if q["Model"] == model), None)
             if match:
                 new_queue.append(match)
 
-    # Save updated order
+    # --- Update app state ---
     st.session_state.queue = new_queue
     st.session_state.uploads = new_uploads
-    st.success("Drag order saved.")
     
     # --- Clear Entire Queue button ---
     st.markdown("---")
