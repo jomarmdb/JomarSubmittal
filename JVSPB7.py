@@ -205,65 +205,59 @@ if uploaded_files:
 # ---- Queue / Cart panel ----
 from streamlit_sortables import sort_items
 import streamlit as st
-import uuid
+import re
 
 st.markdown("---")
 st.subheader("Queue")
 
-# --- Initialize session state ---
+# Ensure state exists
 st.session_state.setdefault("queue", [])
 st.session_state.setdefault("uploads", [])
 
-# --- Build display list with unique keys ---
-queue_display = []
-for idx, item in enumerate(st.session_state.queue):
-    label = f"<span style='font-family:monospace;'>⋮⋮</span> {item['Model']} ({item['Category']} – {item['Subcategory']})"
-    queue_display.append(f"{label} |ID:{uuid.uuid4().hex[:6]}")
-for idx, up in enumerate(st.session_state.uploads, start=len(queue_display) + 1):
-    label = f"<span style='font-family:monospace;'>⋮⋮</span> 📄 {up.name}"
-    queue_display.append(f"{label} |ID:{uuid.uuid4().hex[:6]}")
+# Build display list (add a tiny unique token so duplicates don't collapse)
+display_rows = []   # strings shown to the user + a hidden token we strip later
+index = 0
+for q in st.session_state.queue:
+    index += 1
+    # Example: "⋮⋮ S-100CG (Ball Valves – Lead Free Brass) [#1]"
+    display_rows.append(f"⋮⋮ {q['Model']} ({q['Category']} – {q['Subcategory']}) [#{index}]")
+for up in st.session_state.uploads:
+    index += 1
+    display_rows.append(f"⋮⋮ 📄 {up.name} [#{index}]")
 
-if not queue_display:
+if not display_rows:
     st.info("No items in the queue yet.")
 else:
-    st.markdown("### Reorder Files (drag using ⋮⋮ handles)")
+    st.markdown("### Reorder files (drag using ⋮⋮ handles)")
+    # Render draggable list (no unsupported kwargs)
+    sorted_rows = sort_items(display_rows, direction="vertical", key="queue_sort")
 
-    # Render sortable list with HTML-enabled labels
-    sorted_items = sort_items(
-        queue_display,
-        direction="vertical",
-        key="queue_sort",
-        styles={"backgroundColor": "#FFFFFF"},
-    )
+    # Regex to strip the unique token at the end: " [#N]"
+    token_re = re.compile(r"\s+\[#\d+\]$")
 
-    # --- Process reordered results ---
+    # Rebuild in the newly sorted order
     new_queue, new_uploads = [], []
-    for entry in sorted_items:
-        # Strip unique ID token
-        name_html = entry.split(" |ID:")[0]
-        # Remove HTML tags for text matching
-        clean_name = (
-            name_html.replace("<span style='font-family:monospace;'>⋮⋮</span>", "")
-            .replace("📄 ", "")
-            .strip()
-        )
-
-        if "📄" in name_html:
-            file_name = clean_name
+    for row in sorted_rows:
+        # Remove the unique token
+        clean = token_re.sub("", row)
+        if clean.startswith("⋮⋮ 📄 "):
+            file_name = clean.replace("⋮⋮ 📄 ", "", 1)
             match = next((f for f in st.session_state.uploads if f.name == file_name), None)
             if match:
                 new_uploads.append(match)
         else:
-            model = clean_name.split(" (")[0]
+            # clean looks like: "⋮⋮ MODEL (Category – Subcategory)"
+            text = clean.replace("⋮⋮ ", "", 1)
+            model = text.split(" (")[0]
             match = next((q for q in st.session_state.queue if q["Model"] == model), None)
             if match:
                 new_queue.append(match)
 
-    # Save new order
+    # Save back to session state
     st.session_state.queue = new_queue
     st.session_state.uploads = new_uploads
 
-    st.toast("Order updated")
+    st.success("✅ Order updated")
     
     # --- Clear Entire Queue button ---
     st.markdown("---")
