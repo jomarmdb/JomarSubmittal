@@ -224,11 +224,16 @@ else:
             st.success("Queue cleared.")
 
 # ---- Audience selection ----
-st.markdown("**Package intended for:**")
-aud_contractor = st.checkbox("Contractor")
-aud_engineer = st.checkbox("Engineer")
-aud_distributor = st.checkbox("Distributor")
-aud_utility = st.checkbox("Utility")
+st.markdown("**Intended Customer:**")
+col1, col2, col3, col4 = st.columns(4)
+with col1:
+    aud_contractor = st.checkbox("Contractor")
+with col2:
+    aud_engineer = st.checkbox("Engineer")
+with col3:
+    aud_distributor = st.checkbox("Distributor")
+with col4:
+    aud_utility = st.checkbox("Utility")
 
 # ---- Cover fields ----
 st.markdown("---")
