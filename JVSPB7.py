@@ -88,7 +88,7 @@ def make_cover_pdf(outfile: str, logo_path: str, project_name: str, project_loca
 # App UI / Logic
 # =========================
 st.set_page_config(page_title="Jomar Spec Sheet Combiner", layout="wide")
-st.title("Valve Spec Sheet Combiner — Catalog View")
+st.title("Jomar Valve Submittal Package Builder")
 st.caption("Select by Category → Subcategory → Product. Add uploads, manage queue, and generate a combined PDF with a Jomar-styled cover.")
 
 EXCEL_PATH = "spec_links_images.xlsx"
