@@ -223,6 +223,7 @@ else:
                     st.toast(f"✓ Added {model}", icon="✅")
                 else:
                     st.toast(f"{model} is already in the queue.", icon="⚠️")
+                st.rerun()
 
 # ---- Upload PDFs ----
 st.markdown("---")
