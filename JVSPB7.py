@@ -203,17 +203,25 @@ else:
         with c2:
             model, url, desc = row["Model"], row["URL"], row.get("Description","")
             st.markdown(f"[**{model}**]({url})  \n{desc}")
-            if st.button(f"Add {model}", key=f"add_{category}_{subcategory}_{model}"):
-                if not any((qi["Model"] == model and qi["URL"] == url) for qi in st.session_state.queue):
-                    st.session_state.queue.append({
-                        "Category": row["Category"],
-                        "Subcategory": row["Subcategory"],
-                        "Model": model,
-                        "Description": desc,
-                        "URL": url,
-                        "Image": row["Image"]
-                    })
-                st.success(f"✓ Added {model}")
+add_key = f"add_{category}_{subcategory}_{model}_{uuid.uuid4().hex[:6]}"
+add_clicked = st.button(f"Add {model}", key=add_key)
+
+if add_clicked:
+    if "queue" not in st.session_state:
+        st.session_state.queue = []
+
+    if not any(q["Model"] == model for q in st.session_state.queue):
+        st.session_state.queue.append({
+            "Category": row["Category"],
+            "Subcategory": row["Subcategory"],
+            "Model": model,
+            "Description": desc,
+            "URL": url,
+            "Image": row["Image"]
+        })
+        st.toast(f"✓ Added {model}", icon="✅")
+    else:
+        st.toast(f"{model} is already in the queue.", icon="⚠️")
 
 # ---- Upload PDFs ----
 st.markdown("---")
