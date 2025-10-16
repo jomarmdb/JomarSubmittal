@@ -239,7 +239,7 @@ else:
     st.session_state.uploads = new_uploads
 
 # Clear Queue button
-if st.button("🗑️ Clear Queue"):
+if st.button("Clear Queue"):
     st.session_state.queue = []
     st.session_state.uploads = []
     st.success("Queue cleared.")
