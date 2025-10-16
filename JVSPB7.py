@@ -212,6 +212,7 @@ st.subheader("Queue")
 if not st.session_state.queue and not st.session_state.uploads:
     st.write("No items in the queue yet.")
 else:
+    # Build combined list for sorting
     queue_display = []
     for item in st.session_state.queue:
         queue_display.append(f"{item['Model']} ({item['Category']} – {item['Subcategory']})")
@@ -221,21 +222,9 @@ else:
     st.markdown("### Drag to reorder queue")
     sorted_items = sort_items(queue_display, direction="vertical", key="queue_sort")
 
+    # ---- Update order ----
     new_queue, new_uploads = [], []
-
-    # Rebuild the queue and show remove buttons
     for name in sorted_items:
-        col1, col2 = st.columns([5, 1])  # main name + small remove button column
-
-        with col1:
-            st.write(name)
-
-        with col2:
-            if st.button("🗑️", key=f"remove_{name}"):
-                # Skip adding this file (removes it)
-                continue
-
-        # If not removed, re-add to new queue
         if name.startswith("📄"):
             file_name = name.replace("📄 ", "")
             match = next((f for f in st.session_state.uploads if f.name == file_name), None)
@@ -246,14 +235,41 @@ else:
             match = next((q for q in st.session_state.queue if q["Model"] == model), None)
             if match:
                 new_queue.append(match)
-
-    # Save new queue and upload lists
     st.session_state.queue = new_queue
     st.session_state.uploads = new_uploads
 
-    st.success("✅ Order updated.")
+    # ---- Render reordered list with remove buttons ----
+    st.markdown("### Current Order")
+    keep_queue, keep_uploads = [], []
 
-    # Add Clear Queue button
+    for name in sorted_items:
+        col1, col2 = st.columns([5, 1])
+        with col1:
+            st.write(name)
+        with col2:
+            remove = st.button("🗑️", key=f"remove_{name}")
+
+        if remove:
+            # skip re-adding to keep list
+            continue
+
+        if name.startswith("📄"):
+            file_name = name.replace("📄 ", "")
+            match = next((f for f in st.session_state.uploads if f.name == file_name), None)
+            if match:
+                keep_uploads.append(match)
+        else:
+            model = name.split(" (")[0]
+            match = next((q for q in st.session_state.queue if q["Model"] == model), None)
+            if match:
+                keep_queue.append(match)
+
+    # Save the “kept” items
+    st.session_state.queue = keep_queue
+    st.session_state.uploads = keep_uploads
+
+    # ---- Clear Entire Queue button ----
+    st.markdown("---")
     if st.button("🗑️ Clear Entire Queue"):
         st.session_state.queue = []
         st.session_state.uploads = []
