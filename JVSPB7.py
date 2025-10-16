@@ -156,7 +156,7 @@ with st.sidebar:
             st.session_state.queue.clear()
             st.session_state.uploads.clear()
             st.toast("Queue cleared")
-            st.experimental_rerun()
+            st.rerun()
 
 # =========================
 # Main Page
