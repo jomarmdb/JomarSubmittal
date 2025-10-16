@@ -4,3 +4,4 @@ requests
 reportlab
 openpyxl
 PyPDF2
+streamlit-sortables
