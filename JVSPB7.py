@@ -204,6 +204,7 @@ if uploaded_files:
 
 # ---- Queue / Cart panel ----
 from streamlit_sortables import sort_items
+import streamlit as st
 
 st.markdown("---")
 st.subheader("Queue")
@@ -211,20 +212,30 @@ st.subheader("Queue")
 if not st.session_state.queue and not st.session_state.uploads:
     st.write("No items in the queue yet.")
 else:
-    # Combine queue items and uploaded PDFs into one list for sorting
     queue_display = []
     for item in st.session_state.queue:
         queue_display.append(f"{item['Model']} ({item['Category']} – {item['Subcategory']})")
     for up in st.session_state.uploads:
         queue_display.append(f"📄 {up.name}")
 
-    # Make list sortable
-    st.markdown("Drag to reorder:")
+    st.markdown("### Drag to reorder queue")
     sorted_items = sort_items(queue_display, direction="vertical", key="queue_sort")
 
-    # Update the internal order to match user drag order
     new_queue, new_uploads = [], []
+
+    # Rebuild the queue and show remove buttons
     for name in sorted_items:
+        col1, col2 = st.columns([5, 1])  # main name + small remove button column
+
+        with col1:
+            st.write(name)
+
+        with col2:
+            if st.button("🗑️", key=f"remove_{name}"):
+                # Skip adding this file (removes it)
+                continue
+
+        # If not removed, re-add to new queue
         if name.startswith("📄"):
             file_name = name.replace("📄 ", "")
             match = next((f for f in st.session_state.uploads if f.name == file_name), None)
@@ -235,14 +246,19 @@ else:
             match = next((q for q in st.session_state.queue if q["Model"] == model), None)
             if match:
                 new_queue.append(match)
+
+    # Save new queue and upload lists
     st.session_state.queue = new_queue
     st.session_state.uploads = new_uploads
 
-# Clear Queue button
-if st.button("Clear Queue"):
-    st.session_state.queue = []
-    st.session_state.uploads = []
-    st.success("Queue cleared.")
+    st.success("✅ Order updated.")
+
+    # Add Clear Queue button
+    if st.button("🗑️ Clear Entire Queue"):
+        st.session_state.queue = []
+        st.session_state.uploads = []
+        st.success("Queue cleared.")
+
 
 # ---- Audience selection ----
 st.markdown("Customer Type:")
