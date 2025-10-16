@@ -4,7 +4,7 @@ import requests
 from io import BytesIO
 from PyPDF2 import PdfMerger
 from datetime import datetime
-import tempfile, os, uuid, re
+import tempfile, os, re
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfbase import pdfmetrics
@@ -85,11 +85,11 @@ def make_cover_pdf(outfile: str, logo_path: str, project_name: str, project_loca
     c.save()
 
 # =========================
-# App UI / Logic
+# App Configuration
 # =========================
 st.set_page_config(page_title="Jomar Spec Sheet Combiner", layout="wide")
-st.title("Jomar Valve Submittal Package Builder")
-st.caption("Select by Category → Subcategory → Product. Add uploads, manage queue, and generate a combined PDF with a Jomar-styled cover.")
+st.title("Valve Spec Sheet Combiner — Catalog View")
+st.caption("Select by Category → Subcategory → Product. Add uploads, manage a queue, and generate a combined PDF with a Jomar-styled cover.")
 
 EXCEL_PATH = "spec_links_images.xlsx"
 DEFAULT_LOGO_PATH = r"C:\Users\Matt.Bianchi\OneDrive - jomar.com\Jomar\Company Info\Logos\Jomar Valve Logo Red.png"
@@ -121,9 +121,9 @@ with st.sidebar:
     display_rows = []
 
     for q in st.session_state.queue:
-        display_rows.append(f"⋮⋮ {q['Model']}\u200b{uuid.uuid4().hex[:6]}")
+        display_rows.append(f"⋮⋮ {q['Model']}\u200b")
     for up in st.session_state.uploads:
-        display_rows.append(f"⋮⋮ 📄 {up.name}\u200b{uuid.uuid4().hex[:6]}")
+        display_rows.append(f"⋮⋮ 📄 {up.name}\u200b")
 
     if not display_rows:
         st.info("No items in queue yet.")
@@ -132,29 +132,34 @@ with st.sidebar:
 
         new_queue, new_uploads = [], []
         for entry in sorted_items:
-            name = re.sub(r"\u200b[0-9a-f]{6}$", "", entry).strip()
-            if name.startswith("⋮⋮ 📄 "):
-                file_name = name.replace("⋮⋮ 📄 ", "")
+            name = entry.replace("⋮⋮", "").strip()
+            if name.startswith("📄 "):
+                file_name = name.replace("📄 ", "")
                 match = next((f for f in st.session_state.uploads if f.name == file_name), None)
                 if match:
                     new_uploads.append(match)
             else:
-                model = name.replace("⋮⋮ ", "").strip()
+                model = name.strip()
                 match = next((q for q in st.session_state.queue if q["Model"] == model), None)
                 if match:
                     new_queue.append(match)
-        st.session_state.queue = new_queue
-        st.session_state.uploads = new_uploads
+
+        # ✅ Only update if user actually changed order
+        if new_queue != st.session_state.queue or new_uploads != st.session_state.uploads:
+            st.session_state.queue = new_queue
+            st.session_state.uploads = new_uploads
 
         st.markdown("---")
+        st.markdown(f"**Items in queue:** {len(st.session_state.queue) + len(st.session_state.uploads)}")
+
         if st.button("🗑️ Clear Queue", use_container_width=True):
             st.session_state.queue.clear()
             st.session_state.uploads.clear()
             st.toast("Queue cleared")
-            st.rerun()
+            st.experimental_rerun()
 
 # =========================
-# Main page
+# Main Page
 # =========================
 
 # ---- Persistent category & subcategory selections ----
@@ -202,10 +207,10 @@ else:
             model = str(row["Model"])
             url = str(row["URL"])
             desc = str(row.get("Description", "") or "")
-
             st.markdown(f"[**{model}**]({url})  \n{desc}")
 
-            add_key = f"add::{category}::{subcategory}::{model}"  # stable across reruns
+            # ✅ Stable Add button key
+            add_key = f"add::{category}::{subcategory}::{model}"
             if st.button(f"Add {model}", key=add_key):
                 if not any(q["Model"] == model for q in st.session_state.queue):
                     st.session_state.queue.append({
@@ -217,7 +222,7 @@ else:
                         "Image": row["Image"]
                     })
                     st.toast(f"✓ Added {model}", icon="✅")
-                    st.rerun()
+                    st.experimental_rerun()
                 else:
                     st.toast(f"{model} is already in the queue.", icon="⚠️")
 
