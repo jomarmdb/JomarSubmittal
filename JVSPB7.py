@@ -114,7 +114,6 @@ except Exception as e:
     st.error(f"Unable to load Excel: {e}")
     st.stop()
 
-# ---- Session state ----
 st.session_state.setdefault("queue", [])
 st.session_state.setdefault("uploads", [])
 
@@ -161,6 +160,7 @@ with st.sidebar:
 # =========================
 # Main page
 # =========================
+
 # ---- Persistent category & subcategory selections ----
 if "selected_category" not in st.session_state:
     st.session_state.selected_category = None
@@ -193,35 +193,36 @@ filtered = library[(library["Category"] == category) & (library["Subcategory"] =
 st.markdown("### Products")
 
 if filtered.empty:
-    st.info("No products found.")
+    st.info("No products found for this selection.")
 else:
     for _, row in filtered.iterrows():
         c1, c2 = st.columns([1, 3], vertical_alignment="center")
         with c1:
-            try: st.image(row["Image"], width=110)
-            except: st.write("No image")
+            try:
+                st.image(row["Image"], width=110)
+            except Exception:
+                st.write("No image")
         with c2:
-            model, url, desc = row["Model"], row["URL"], row.get("Description","")
+            model = str(row["Model"])
+            url = str(row["URL"])
+            desc = str(row.get("Description", "") or "")
+
             st.markdown(f"[**{model}**]({url})  \n{desc}")
-add_key = f"add_{category}_{subcategory}_{model}_{uuid.uuid4().hex[:6]}"
-add_clicked = st.button(f"Add {model}", key=add_key)
 
-if add_clicked:
-    if "queue" not in st.session_state:
-        st.session_state.queue = []
-
-    if not any(q["Model"] == model for q in st.session_state.queue):
-        st.session_state.queue.append({
-            "Category": row["Category"],
-            "Subcategory": row["Subcategory"],
-            "Model": model,
-            "Description": desc,
-            "URL": url,
-            "Image": row["Image"]
-        })
-        st.toast(f"✓ Added {model}", icon="✅")
-    else:
-        st.toast(f"{model} is already in the queue.", icon="⚠️")
+            add_key = f"add_{category}_{subcategory}_{model}_{uuid.uuid4().hex[:6]}"
+            if st.button(f"Add {model}", key=add_key):
+                if not any(q["Model"] == model for q in st.session_state.queue):
+                    st.session_state.queue.append({
+                        "Category": row["Category"],
+                        "Subcategory": row["Subcategory"],
+                        "Model": model,
+                        "Description": desc,
+                        "URL": url,
+                        "Image": row["Image"]
+                    })
+                    st.toast(f"✓ Added {model}", icon="✅")
+                else:
+                    st.toast(f"{model} is already in the queue.", icon="⚠️")
 
 # ---- Upload PDFs ----
 st.markdown("---")
