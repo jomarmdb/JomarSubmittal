@@ -205,7 +205,6 @@ if uploaded_files:
 # ---- Queue / Cart panel ----
 from streamlit_sortables import sort_items
 import streamlit as st
-import uuid
 
 st.markdown("---")
 st.subheader("Queue")
@@ -213,60 +212,40 @@ st.subheader("Queue")
 if not st.session_state.queue and not st.session_state.uploads:
     st.write("No items in the queue yet.")
 else:
-    # --- Build list for sorting ---
+    # --- Build combined list for sorting ---
     queue_display = []
     for item in st.session_state.queue:
         queue_display.append(f"{item['Model']} ({item['Category']} – {item['Subcategory']})")
     for up in st.session_state.uploads:
         queue_display.append(f"📄 {up.name}")
 
-    st.markdown("### Drag to reorder or remove items")
+    st.markdown("### Drag or remove items")
 
-    # --- Construct HTML blocks with remove buttons ---
-    html_blocks = []
+    # Create a list of draggable items with embedded remove buttons
+    item_blocks = []
     for name in queue_display:
-        safe_id = str(uuid.uuid4())  # unique id for remove button
-        html_blocks.append(
-            f"""
-            <div style='display:flex; justify-content:space-between; align-items:center; padding:6px 10px; 
-                        border:1px solid #ddd; border-radius:6px; margin-bottom:4px; background-color:#fafafa;'>
-                <span>{name}</span>
-                <form action="" method="post">
-                    <button type="submit" name="remove" value="{name}" 
-                        style="background-color:#bc141b; color:white; border:none; border-radius:4px; 
-                               padding:2px 8px; cursor:pointer; font-size:12px;">
-                        ❌
-                    </button>
-                </form>
-            </div>
-            """
-        )
+        remove_key = f"remove_{name}"
+        # Add small “Remove” button text to item display
+        item_blocks.append(f"{name} ❌")
 
-    # --- Render sortable list ---
-    sorted_html = sort_items(html_blocks, direction="vertical", key="queue_sort", style={"background": "#fff"})
+    # --- Render draggable list ---
+    sorted_items = sort_items(item_blocks, direction="vertical", key="queue_sort")
 
-    # --- Detect remove clicks ---
-    remove_trigger = st.session_state.get("remove_trigger", None)
-    remove_val = st.query_params.get("remove")
-    if remove_val:
-        remove_trigger = remove_val
-        st.session_state["remove_trigger"] = None  # reset
-        st.experimental_rerun()
-
-    # --- Process new order ---
+    # --- Process results ---
     new_queue, new_uploads = [], []
-    for block in sorted_html:
-        # Extract plain item name
-        name = block.split("<span>")[1].split("</span>")[0]
-        if name == remove_trigger:
-            continue  # skip removed item
-        if name.startswith("📄"):
-            file_name = name.replace("📄 ", "")
+    for name in sorted_items:
+        base_name = name.replace(" ❌", "")
+        # Check for removal trigger (we’ll watch for user click next)
+        if st.session_state.get(f"remove_{base_name}", False):
+            continue
+
+        if base_name.startswith("📄"):
+            file_name = base_name.replace("📄 ", "")
             match = next((f for f in st.session_state.uploads if f.name == file_name), None)
             if match:
                 new_uploads.append(match)
         else:
-            model = name.split(" (")[0]
+            model = base_name.split(" (")[0]
             match = next((q for q in st.session_state.queue if q["Model"] == model), None)
             if match:
                 new_queue.append(match)
