@@ -214,89 +214,70 @@ st.subheader("Queue")
 st.session_state.setdefault("queue", [])
 st.session_state.setdefault("uploads", [])
 
-# --- Build list (only model name / file name shown) ---
+# --- Build list (only model name or file name, no HTML tags) ---
 display_rows = []
 index = 0
 
 for q in st.session_state.queue:
     index += 1
-    display_rows.append(f"{q['Model']}\u200B{uuid.uuid4().hex[:6]}")  # invisible unique ID
+    # Add invisible ID so duplicates don’t collapse
+    display_rows.append(f"⋮⋮ {q['Model']}\u200B{uuid.uuid4().hex[:6]}")
 
 for up in st.session_state.uploads:
     index += 1
-    display_rows.append(f"📄 {up.name}\u200B{uuid.uuid4().hex[:6]}")
+    display_rows.append(f"⋮⋮ 📄 {up.name}\u200B{uuid.uuid4().hex[:6]}")
 
 if not display_rows:
     st.info("No items in the queue yet.")
 else:
-    st.markdown("### Reorder files")
+    st.markdown("### Reorder Files (drag using ⋮⋮ handles)")
 
-    # --- Add subtle styling for handle layout ---
+    # Optional styling to add spacing and borders
     st.markdown(
         """
         <style>
-        .sortable-container {
-            max-height: none !important;
-            overflow: visible !important;
-        }
-        .sortable-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
+        .sortable-container div {
             font-size: 16px;
-            border-bottom: 1px solid #e0e0e0;
-            padding: 6px 0;
-        }
-        .handle {
-            cursor: grab;
-            font-family: monospace;
-            color: #888;
-            width: 25px;
-            text-align: center;
+            border-bottom: 1px solid #ddd;
+            padding: 6px 4px;
         }
         </style>
         """,
         unsafe_allow_html=True
     )
 
-    # --- Build formatted items (handle + name) ---
-    styled_items = [
-        f"<div class='sortable-item'><div class='handle'>⋮⋮</div><div>{name[:-7]}</div></div>"
-        for name in display_rows
-    ]
-
-    sorted_items = sort_items(styled_items, direction="vertical", key="queue_sort")
+    # --- Render sortable list ---
+    sorted_items = sort_items(display_rows, direction="vertical", key="queue_sort")
 
     # --- Map reordered items back to actual objects ---
     new_queue, new_uploads = [], []
     for entry in sorted_items:
-        # Strip HTML and invisible ID
-        name = entry.replace("<div class='sortable-item'><div class='handle'>⋮⋮</div><div>", "")
-        name = name.replace("</div></div>", "").strip()
-        if name.startswith("📄 "):
-            file_name = name.replace("📄 ", "")
+        # Strip invisible ID at the end
+        name = entry[:-7].strip()
+
+        if name.startswith("⋮⋮ 📄 "):
+            file_name = name.replace("⋮⋮ 📄 ", "")
             match = next((f for f in st.session_state.uploads if f.name == file_name), None)
             if match:
                 new_uploads.append(match)
         else:
-            model = name.split(" ")[0]
+            model = name.replace("⋮⋮ ", "").strip()
             match = next((q for q in st.session_state.queue if q["Model"] == model), None)
             if match:
                 new_queue.append(match)
 
+    # --- Save new order ---
     st.session_state.queue = new_queue
     st.session_state.uploads = new_uploads
-
     st.toast("✅ Order updated")
-    
-    # --- Clear Entire Queue button ---
+
+    # --- Clear Entire Queue ---
     st.markdown("---")
-    if st.button("Clear All Files"):
+    if st.button("🗑️ Clear Entire Queue"):
         st.session_state.queue.clear()
         st.session_state.uploads.clear()
-        st.success("All Files Cleared")
+        st.toast("Queue cleared")
         st.rerun()
-        
 # ---- Cover fields ----
 st.markdown("---")
 st.subheader("Cover Page")
