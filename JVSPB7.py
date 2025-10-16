@@ -4,17 +4,17 @@ import requests
 from io import BytesIO
 from PyPDF2 import PdfMerger
 from datetime import datetime
-import tempfile, os
-
-# =========================
-# Cover Page (Jomar style)
-# =========================
+import tempfile, os, uuid, re
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.utils import ImageReader
+from streamlit_sortables import sort_items
 
+# =========================
+# PDF Cover Page (Jomar style)
+# =========================
 def hex_to_rgb01(hex_color: str):
     h = hex_color.strip().lstrip("#")
     r = int(h[0:2], 16) / 255.0
@@ -43,43 +43,29 @@ def draw_logo_centered_between_page_top_and_bar_top(c, logo_path, max_width, pag
     y = min(y, page_height - h - 24)
     c.drawImage(logo_path, x, y, width=w, height=h, preserveAspectRatio=True, mask='auto')
 
-def make_cover_pdf(
-    outfile: str,
-    logo_path: str,
-    project_name: str,
-    project_location: str,
-    contractor: str,
-    date_prepared,
-    bid_date,
-    font_path_light: str = ""
-):
+def make_cover_pdf(outfile: str, logo_path: str, project_name: str, project_location: str,
+                   contractor: str, date_prepared, bid_date, font_path_light: str = ""):
     c = canvas.Canvas(outfile, pagesize=letter)
     width, height = letter
-
     font_light = try_register_font(font_path_light, "ProximaNova-Light")
 
-    # Red bar (lowered & taller), locked to #BC141B
+    # Red bar (lowered & taller)
     BAR_COLOR = "#BC141B"
-    bar_rgb   = hex_to_rgb01(BAR_COLOR)
+    bar_rgb = hex_to_rgb01(BAR_COLOR)
     bar_height = 150
-    bar_y      = (height / 2) - 10
-    bar_top_y  = bar_y + bar_height
+    bar_y = (height / 2) - 10
+    bar_top_y = bar_y + bar_height
 
     c.setFillColorRGB(*bar_rgb)
     c.rect(0, bar_y, width, bar_height, stroke=0, fill=1)
 
-    # Logo centered between page top and bar top
+    # Logo
     if logo_path and os.path.exists(logo_path):
-        try:
-            draw_logo_centered_between_page_top_and_bar_top(
-                c, logo_path, max_width=220, page_width=width, page_height=height, bar_top_y=bar_top_y
-            )
-        except Exception as e:
-            # Render app warning via Streamlit only when running inside Streamlit
-            try: st.warning(f"Logo draw error: {e}")
-            except: pass
+        draw_logo_centered_between_page_top_and_bar_top(
+            c, logo_path, max_width=220, page_width=width, page_height=height, bar_top_y=bar_top_y
+        )
 
-    # White stacked text inside bar (ALL CAPS, not bold)
+    # White stacked text inside bar (ALL CAPS)
     c.setFillColorRGB(1, 1, 1)
     c.setFont(font_light, 24)
     c.drawCentredString(width/2, bar_y + bar_height - 40, (project_name or "PROJECT NAME").upper())
@@ -88,7 +74,7 @@ def make_cover_pdf(
     c.setFont(font_light, 13)
     c.drawCentredString(width/2, bar_y + 22, "SUBMITTAL PACKAGE")
 
-    # Bottom fields (left aligned)
+    # Bottom fields
     left_margin = 50
     base_y = 120
     line_gap = 18
@@ -99,48 +85,82 @@ def make_cover_pdf(
     bd = bid_date.strftime("%B %d, %Y") if bid_date else ""
     c.drawString(left_margin, base_y + line_gap, f"Date Prepared: {dp}")
     c.drawString(left_margin, base_y, f"Bid Date: {bd}")
-
     c.showPage()
     c.save()
 
 # =========================
 # App UI / Logic
 # =========================
+st.set_page_config(page_title="Jomar Spec Sheet Combiner", layout="wide")
 st.title("Valve Spec Sheet Combiner — Catalog View")
-st.caption("Select by Category → Subcategory → Product. Add uploads, manage a queue, and generate a combined PDF with a Jomar-styled cover.")
+st.caption("Select by Category → Subcategory → Product. Add uploads, manage queue, and generate a combined PDF with a Jomar-styled cover.")
 
-# ---- Configuration (edit these paths as needed) ----
 EXCEL_PATH = "spec_links_images.xlsx"
 DEFAULT_LOGO_PATH = r"C:\Users\Matt.Bianchi\OneDrive - jomar.com\Jomar\Company Info\Logos\Jomar Valve Logo Red.png"
 PROXIMA_TTF = ""
 
-# ---- Load library ----
 @st.cache_data(show_spinner=False)
 def load_library(xlsx_path):
     df = pd.read_excel(xlsx_path)
-    # Normalize expected column names
     expected = {"Category","Subcategory","Model","Description","URL","Image"}
     missing = [c for c in expected if c not in df.columns]
     if missing:
-        raise ValueError(f"Missing required columns in Excel: {missing}")
-    # Drop rows without URL or Model
-    df = df.dropna(subset=["Model","URL"]).copy()
-    return df
+        raise ValueError(f"Missing required columns: {missing}")
+    return df.dropna(subset=["Model","URL"]).copy()
 
 try:
     library = load_library(EXCEL_PATH)
 except Exception as e:
-    st.error(f"Unable to load Excel file: {e}")
+    st.error(f"Unable to load Excel: {e}")
     st.stop()
 
-# ---- Session state (queue + uploads) ----
-if "queue" not in st.session_state:
-    # queue items are dicts: {Model, URL, Category, Subcategory, Description, Image}
-    st.session_state.queue = []
-if "uploads" not in st.session_state:
-    st.session_state.uploads = []
+# ---- Session state ----
+st.session_state.setdefault("queue", [])
+st.session_state.setdefault("uploads", [])
 
-# ---- Filters: Category → Subcategory ----
+# =========================
+# Sidebar: Queue / Cart
+# =========================
+with st.sidebar:
+    st.header("🧾 Spec Sheet Queue")
+
+    display_rows = []
+    for q in st.session_state.queue:
+        display_rows.append(f"⋮⋮ {q['Model']}\u200b{uuid.uuid4().hex[:6]}")
+    for up in st.session_state.uploads:
+        display_rows.append(f"⋮⋮ 📄 {up.name}\u200b{uuid.uuid4().hex[:6]}")
+
+    if not display_rows:
+        st.info("No items in queue yet.")
+    else:
+        sorted_items = sort_items(display_rows, direction="vertical", key="queue_sort_sidebar")
+        new_queue, new_uploads = [], []
+        for entry in sorted_items:
+            name = re.sub(r"\u200b[0-9a-f]{6}$", "", entry).strip()
+            if name.startswith("⋮⋮ 📄 "):
+                file_name = name.replace("⋮⋮ 📄 ", "")
+                match = next((f for f in st.session_state.uploads if f.name == file_name), None)
+                if match:
+                    new_uploads.append(match)
+            else:
+                model = name.replace("⋮⋮ ", "").strip()
+                match = next((q for q in st.session_state.queue if q["Model"] == model), None)
+                if match:
+                    new_queue.append(match)
+
+        st.session_state.queue = new_queue
+        st.session_state.uploads = new_uploads
+
+        st.markdown("---")
+        if st.button("🗑️ Clear Queue", use_container_width=True):
+            st.session_state.queue.clear()
+            st.session_state.uploads.clear()
+            st.toast("Queue cleared")
+            st.rerun()
+
+# =========================
+# Main page
+# =========================
 cols = st.columns(2)
 with cols[0]:
     category = st.selectbox("Category", sorted(library["Category"].dropna().unique()))
@@ -149,26 +169,20 @@ with cols[1]:
     subcategory = st.selectbox("Subcategory", sorted(sub_df["Subcategory"].dropna().unique()))
 
 filtered = library[(library["Category"] == category) & (library["Subcategory"] == subcategory)]
-
 st.markdown("### Products")
+
 if filtered.empty:
-    st.info("No products found for this selection.")
+    st.info("No products found.")
 else:
-    # Image grid: each product shows image, linked model, description, and Add button
     for _, row in filtered.iterrows():
         c1, c2 = st.columns([1, 3], vertical_alignment="center")
         with c1:
-            try:
-                st.image(row["Image"], width=110)
-            except Exception:
-                st.write("No image")
+            try: st.image(row["Image"], width=110)
+            except: st.write("No image")
         with c2:
-            model = str(row["Model"])
-            url = str(row["URL"])
-            desc = str(row.get("Description", "") or "")
+            model, url, desc = row["Model"], row["URL"], row.get("Description","")
             st.markdown(f"[**{model}**]({url})  \n{desc}")
             if st.button(f"Add {model}", key=f"add_{category}_{subcategory}_{model}"):
-                # prevent duplicates by Model+URL
                 if not any((qi["Model"] == model and qi["URL"] == url) for qi in st.session_state.queue):
                     st.session_state.queue.append({
                         "Category": row["Category"],
@@ -180,165 +194,72 @@ else:
                     })
                 st.success(f"✓ Added {model}")
 
-# ---- Optional user uploads (drag & drop) ----
+# ---- Upload PDFs ----
 st.markdown("---")
-st.subheader("Optional: Drag & drop additional PDFs")
+st.subheader("Optional: Drag & Drop Additional PDFs")
 uploaded_files = st.file_uploader(
-    "Add extra PDFs that aren’t in the library (they’ll be merged after the cover).",
+    "Add extra PDFs (merged after the cover)",
     type="pdf",
     accept_multiple_files=True
 )
-# Store uploads in session state so they persist while navigating
 if uploaded_files:
-    # Add newly uploaded files by id/name (avoid duplicates by name + size)
     new_count = 0
     existing_keys = {(f.name, f.size) for f in st.session_state.uploads}
     for f in uploaded_files:
-        key = (f.name, f.size)
-        if key not in existing_keys:
+        if (f.name, f.size) not in existing_keys:
             st.session_state.uploads.append(f)
-            existing_keys.add(key)
+            existing_keys.add((f.name, f.size))
             new_count += 1
     if new_count:
         st.success(f"✓ Added {new_count} uploaded file(s).")
 
-# ---- Queue / Cart panel ----
-from streamlit_sortables import sort_items
-import streamlit as st
-import uuid
-import re
-
-st.markdown("---")
-st.subheader("Queue")
-
-# --- Ensure session state lists exist ---
-st.session_state.setdefault("queue", [])
-st.session_state.setdefault("uploads", [])
-
-# --- Build display list (model name or upload name only) ---
-display_rows = []
-index = 0
-
-for q in st.session_state.queue:
-    index += 1
-    # add invisible ID for uniqueness
-    display_rows.append(f"⋮⋮ {q['Model']}\u200b{uuid.uuid4().hex[:6]}")
-
-for up in st.session_state.uploads:
-    index += 1
-    display_rows.append(f"⋮⋮ 📄 {up.name}\u200b{uuid.uuid4().hex[:6]}")
-
-if not display_rows:
-    st.info("No items in the queue yet.")
-else:
-    st.markdown("### Reorder Files (drag using ⋮⋮ handles)")
-
-    # Optional styling
-    st.markdown(
-        """
-        <style>
-        .sortable-container div {
-            font-size: 16px;
-            border-bottom: 1px solid #ddd;
-            padding: 6px 4px;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-
-    # --- Render drag list ---
-    sorted_items = sort_items(display_rows, direction="vertical", key="queue_sort")
-
-    # --- Strip invisible IDs before matching ---
-    new_queue, new_uploads = [], []
-    for entry in sorted_items:
-        # remove invisible ID at end
-        name = re.sub(r"\u200b[0-9a-f]{6}$", "", entry).strip()
-
-        if name.startswith("⋮⋮ 📄 "):
-            file_name = name.replace("⋮⋮ 📄 ", "")
-            match = next((f for f in st.session_state.uploads if f.name == file_name), None)
-            if match:
-                new_uploads.append(match)
-        else:
-            model = name.replace("⋮⋮ ", "").strip()
-            match = next((q for q in st.session_state.queue if q["Model"] == model), None)
-            if match:
-                new_queue.append(match)
-
-    # --- Save updated order ---
-    st.session_state.queue = new_queue
-    st.session_state.uploads = new_uploads
-    st.toast("✅ Order updated")
-
-    # --- Clear Entire Queue ---
-    st.markdown("---")
-    if st.button("🗑️ Clear Entire Queue"):
-        st.session_state.queue.clear()
-        st.session_state.uploads.clear()
-        st.toast("Queue cleared")
-        st.rerun()
-        
-# ---- Cover fields ----
+# ---- Cover Page Fields ----
 st.markdown("---")
 st.subheader("Cover Page")
-# ---- Audience selection ----
-st.markdown("Customer Type:")
-col1, col2, col3, col4 = st.columns(4)
+col1, col2 = st.columns(2)
 with col1:
-    aud_contractor = st.checkbox("Contractor")
+    project_name = st.text_input("Project Name", "")
+    contractor_name = st.text_input("Contractor", "")
 with col2:
-    aud_engineer = st.checkbox("Engineer")
-with col3:
-    aud_distributor = st.checkbox("Distributor")
-with col4:
-    aud_utility = st.checkbox("Utility")
-project_name = st.text_input("Project Name", "")
-project_location = st.text_input("Project Location", "")
-contractor_name = st.text_input("Contractor", "")
-date_prepared = st.date_input("Date Prepared")
+    project_location = st.text_input("Project Location", "")
+    date_prepared = st.date_input("Date Prepared")
 bid_date = st.date_input("Bid Date")
 logo_path = DEFAULT_LOGO_PATH
 
 # ---- Generate Combined PDF ----
 if st.session_state.queue or st.session_state.uploads:
-    if st.button("Generate Combined PDF"):
-        # Build cover
+    if st.button("Generate Combined PDF", type="primary"):
         cover_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
         make_cover_pdf(
             cover_tmp.name,
-            logo_path=logo_path,
-            project_name=project_name,
-            project_location=project_location,
-            contractor=contractor_name,
-            date_prepared=date_prepared,
-            bid_date=bid_date,
-            font_path_light=PROXIMA_TTF,
+            logo_path,
+            project_name,
+            project_location,
+            contractor_name,
+            date_prepared,
+            bid_date,
+            PROXIMA_TTF,
         )
 
-        # Merge cover + selected PDFs
         merger = PdfMerger()
         merger.append(cover_tmp.name)
 
-        # 1) Library items (download by URL in the order added)
+        # Library PDFs
         for item in st.session_state.queue:
-            url = item["URL"]
             try:
-                resp = requests.get(url, timeout=30)
+                resp = requests.get(item["URL"], timeout=30)
                 resp.raise_for_status()
                 merger.append(BytesIO(resp.content))
             except Exception as e:
-                st.warning(f"Could not add {item['Model']} from {url}: {e}")
+                st.warning(f"Could not add {item['Model']}: {e}")
 
-        # 2) Uploaded local PDFs (in the order added)
+        # Uploaded PDFs
         for up in st.session_state.uploads:
             try:
                 merger.append(up)
             except Exception as e:
                 st.warning(f"Could not add uploaded file {up.name}: {e}")
 
-        # Write output
         output = BytesIO()
         merger.write(output)
         merger.close()
