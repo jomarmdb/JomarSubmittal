@@ -205,78 +205,89 @@ if uploaded_files:
 # ---- Queue / Cart panel ----
 from streamlit_sortables import sort_items
 import streamlit as st
-import re
+import uuid
 
 st.markdown("---")
 st.subheader("Queue")
 
-# Ensure state exists
+# --- Ensure session state lists exist ---
 st.session_state.setdefault("queue", [])
 st.session_state.setdefault("uploads", [])
 
-# Build display list (add a tiny unique token so duplicates don't collapse)
-display_rows = []   # visible text + hidden unique ID
+# --- Build list (only model name / file name shown) ---
+display_rows = []
 index = 0
 
 for q in st.session_state.queue:
     index += 1
-    # Invisible ID added using zero-width characters
-    display_rows.append(f"⋮⋮ {q['Model']}\u200B{index}")
+    display_rows.append(f"{q['Model']}\u200B{uuid.uuid4().hex[:6]}")  # invisible unique ID
 
 for up in st.session_state.uploads:
     index += 1
-    display_rows.append(f"⋮⋮ 📄 {up.name}\u200B{index}")
+    display_rows.append(f"📄 {up.name}\u200B{uuid.uuid4().hex[:6]}")
 
 if not display_rows:
     st.info("No items in the queue yet.")
 else:
-    st.markdown("Drag to Reorder Files")
+    st.markdown("### Reorder files")
+
+    # --- Add subtle styling for handle layout ---
     st.markdown(
         """
         <style>
-        /* Make the sortable list expand dynamically */
         .sortable-container {
             max-height: none !important;
             overflow: visible !important;
         }
-        /* Add padding so it doesn't get hidden behind sections below */
-        .block-container {
-            padding-bottom: 250px;
+        .sortable-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 16px;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 6px 0;
+        }
+        .handle {
+            cursor: grab;
+            font-family: monospace;
+            color: #888;
+            width: 25px;
+            text-align: center;
         }
         </style>
         """,
         unsafe_allow_html=True
     )
 
-    # Render draggable list (no unsupported kwargs)
-    sorted_rows = sort_items(display_rows, direction="vertical", key="queue_sort")
+    # --- Build formatted items (handle + name) ---
+    styled_items = [
+        f"<div class='sortable-item'><div class='handle'>⋮⋮</div><div>{name[:-7]}</div></div>"
+        for name in display_rows
+    ]
 
-    # Regex to strip the unique token at the end: " [#N]"
-    token_re = re.compile(r"\s+\[#\d+\]$")
+    sorted_items = sort_items(styled_items, direction="vertical", key="queue_sort")
 
-    # Rebuild in the newly sorted order
+    # --- Map reordered items back to actual objects ---
     new_queue, new_uploads = [], []
-    for row in sorted_rows:
-        # Remove the unique token
-        clean = token_re.sub("", row)
-        if clean.startswith("⋮⋮ 📄 "):
-            file_name = clean.replace("⋮⋮ 📄 ", "", 1)
+    for entry in sorted_items:
+        # Strip HTML and invisible ID
+        name = entry.replace("<div class='sortable-item'><div class='handle'>⋮⋮</div><div>", "")
+        name = name.replace("</div></div>", "").strip()
+        if name.startswith("📄 "):
+            file_name = name.replace("📄 ", "")
             match = next((f for f in st.session_state.uploads if f.name == file_name), None)
             if match:
                 new_uploads.append(match)
         else:
-            # clean looks like: "⋮⋮ MODEL (Category – Subcategory)"
-            text = clean.replace("⋮⋮ ", "", 1)
-            model = text.split(" (")[0]
+            model = name.split(" ")[0]
             match = next((q for q in st.session_state.queue if q["Model"] == model), None)
             if match:
                 new_queue.append(match)
 
-    # Save back to session state
     st.session_state.queue = new_queue
     st.session_state.uploads = new_uploads
 
-    st.success("✅ Order updated")
+    st.toast("✅ Order updated")
     
     # --- Clear Entire Queue button ---
     st.markdown("---")
