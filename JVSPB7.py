@@ -117,9 +117,9 @@ st.session_state.setdefault("uploads", [])
 # Sidebar: Queue / Cart
 # =========================
 with st.sidebar:
-    st.header("Selected Spec Sheets")
+    st.markdown("Selected Spec Sheets")
 
-    # Build visible rows
+    # Build the drag/drop list from current queue + uploads
     display_rows = []
     for q in st.session_state.queue:
         display_rows.append(f"⋮⋮ {q['Model']}")
