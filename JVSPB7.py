@@ -215,6 +215,9 @@ st.subheader("Queue")
 st.session_state.setdefault("queue", [])
 st.session_state.setdefault("uploads", [])
 
+st.write("Queue count:", len(st.session_state.queue))
+st.write("Uploads count:", len(st.session_state.uploads))
+
 # --- Build display list (model name or upload name only) ---
 display_rows = []
 index = 0
