@@ -239,12 +239,14 @@ else:
     st.session_state.queue = new_queue
     st.session_state.uploads = new_uploads
 
-    # Add Clear Queue button
-    st.markdown("---")
-    if st.button("Clear Entire Queue"):
-        st.session_state.queue = []
-        st.session_state.uploads = []
-        st.success("All Items Cleared")
+if st.button("Clear All Files"):
+    st.session_state.queue = []
+    st.session_state.uploads = []
+    st.session_state.cleared = True
+
+if st.session_state.get("cleared"):
+    st.success("All Files Cleared")
+    st.session_state.cleared = False
 
 # ---- Audience selection ----
 st.markdown("Customer Type:")
