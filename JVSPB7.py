@@ -216,10 +216,9 @@ st.session_state.setdefault("uploads", [])
 
 # Build display list (add a tiny unique token so duplicates don't collapse)
 display_rows = []   # strings shown to the user + a hidden token we strip later
-index = 0
 for q in st.session_state.queue:
-    # Example: "⋮⋮ S-100CG (Ball Valves – Lead Free Brass) [#1]"
-    display_rows.append(f"⋮⋮ {q['Model']} ({q['Category']} – {q['Subcategory']}) [#{index}]")
+    # Example: "⋮⋮ S-100CG"
+    display_rows.append(f"⋮⋮ {q['Model']})
 for up in st.session_state.uploads:
     display_rows.append(f"⋮⋮ 📄 {up.name}")
 
