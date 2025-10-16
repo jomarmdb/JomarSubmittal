@@ -203,25 +203,42 @@ if uploaded_files:
         st.success(f"✓ Added {new_count} uploaded file(s).")
 
 # ---- Queue / Cart panel ----
+from streamlit_sortables import sort_items
+
 st.markdown("---")
 st.subheader("Queue")
+
 if not st.session_state.queue and not st.session_state.uploads:
     st.write("No items in the queue yet.")
 else:
-    if st.session_state.queue:
-        st.write("**From Library:**")
-        qdf = pd.DataFrame(st.session_state.queue)[["Category","Subcategory","Model","URL"]]
-        st.dataframe(qdf, use_container_width=True)
-    if st.session_state.uploads:
-        st.write("**Uploaded PDFs:**")
-        st.write("• " + "  \n• ".join([f.name for f in st.session_state.uploads]))
+    # Combine queue items and uploaded PDFs into one list for sorting
+    queue_display = []
+    for item in st.session_state.queue:
+        queue_display.append(f"{item['Model']} ({item['Category']} – {item['Subcategory']})")
+    for up in st.session_state.uploads:
+        queue_display.append(f"📄 {up.name}")
 
-    cA, cB = st.columns(2)
-    with cA:
-        if st.button("🧹 Clear Queue"):
-            st.session_state.queue = []
-            st.session_state.uploads = []
-            st.success("Queue cleared.")
+    # Make list sortable
+    st.markdown("Drag to reorder:")
+    sorted_items = sort_items(queue_display, direction="vertical", key="queue_sort")
+
+    # Update the internal order to match user drag order
+    new_queue, new_uploads = [], []
+    for name in sorted_items:
+        if name.startswith("📄"):
+            file_name = name.replace("📄 ", "")
+            match = next((f for f in st.session_state.uploads if f.name == file_name), None)
+            if match:
+                new_uploads.append(match)
+        else:
+            model = name.split(" (")[0]
+            match = next((q for q in st.session_state.queue if q["Model"] == model), None)
+            if match:
+                new_queue.append(match)
+    st.session_state.queue = new_queue
+    st.session_state.uploads = new_uploads
+
+    st.success("✅ Drag order saved automatically.")
 
 # ---- Audience selection ----
 st.markdown("Customer Type:")
