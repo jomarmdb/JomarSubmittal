@@ -49,7 +49,6 @@ def make_cover_pdf(outfile: str, logo_path: str, project_name: str, project_loca
     width, height = letter
     font_light = try_register_font(font_path_light, "ProximaNova-Light")
 
-    # Red bar (lowered & taller)
     BAR_COLOR = "#BC141B"
     bar_rgb = hex_to_rgb01(BAR_COLOR)
     bar_height = 150
@@ -59,13 +58,11 @@ def make_cover_pdf(outfile: str, logo_path: str, project_name: str, project_loca
     c.setFillColorRGB(*bar_rgb)
     c.rect(0, bar_y, width, bar_height, stroke=0, fill=1)
 
-    # Logo
     if logo_path and os.path.exists(logo_path):
         draw_logo_centered_between_page_top_and_bar_top(
             c, logo_path, max_width=220, page_width=width, page_height=height, bar_top_y=bar_top_y
         )
 
-    # White stacked text inside bar (ALL CAPS)
     c.setFillColorRGB(1, 1, 1)
     c.setFont(font_light, 24)
     c.drawCentredString(width/2, bar_y + bar_height - 40, (project_name or "PROJECT NAME").upper())
@@ -74,7 +71,6 @@ def make_cover_pdf(outfile: str, logo_path: str, project_name: str, project_loca
     c.setFont(font_light, 13)
     c.drawCentredString(width/2, bar_y + 22, "SUBMITTAL PACKAGE")
 
-    # Bottom fields
     left_margin = 50
     base_y = 120
     line_gap = 18
@@ -122,8 +118,8 @@ st.session_state.setdefault("uploads", [])
 # =========================
 with st.sidebar:
     st.header("🧾 Spec Sheet Queue")
-
     display_rows = []
+
     for q in st.session_state.queue:
         display_rows.append(f"⋮⋮ {q['Model']}\u200b{uuid.uuid4().hex[:6]}")
     for up in st.session_state.uploads:
@@ -133,6 +129,7 @@ with st.sidebar:
         st.info("No items in queue yet.")
     else:
         sorted_items = sort_items(display_rows, direction="vertical", key="queue_sort_sidebar")
+
         new_queue, new_uploads = [], []
         for entry in sorted_items:
             name = re.sub(r"\u200b[0-9a-f]{6}$", "", entry).strip()
@@ -146,7 +143,6 @@ with st.sidebar:
                 match = next((q for q in st.session_state.queue if q["Model"] == model), None)
                 if match:
                     new_queue.append(match)
-
         st.session_state.queue = new_queue
         st.session_state.uploads = new_uploads
 
@@ -221,9 +217,9 @@ else:
                         "Image": row["Image"]
                     })
                     st.toast(f"✓ Added {model}", icon="✅")
+                    st.rerun()
                 else:
                     st.toast(f"{model} is already in the queue.", icon="⚠️")
-                st.rerun()
 
 # ---- Upload PDFs ----
 st.markdown("---")
@@ -275,7 +271,6 @@ if st.session_state.queue or st.session_state.uploads:
         merger = PdfMerger()
         merger.append(cover_tmp.name)
 
-        # Library PDFs
         for item in st.session_state.queue:
             try:
                 resp = requests.get(item["URL"], timeout=30)
@@ -284,7 +279,6 @@ if st.session_state.queue or st.session_state.uploads:
             except Exception as e:
                 st.warning(f"Could not add {item['Model']}: {e}")
 
-        # Uploaded PDFs
         for up in st.session_state.uploads:
             try:
                 merger.append(up)
