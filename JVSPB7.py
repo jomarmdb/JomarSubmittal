@@ -203,56 +203,41 @@ if uploaded_files:
         st.success(f"✓ Added {new_count} uploaded file(s).")
 
 # ---- Queue / Cart panel ----
-from streamlit_sortables import sort_items
 import streamlit as st
 
 st.markdown("---")
 st.subheader("Queue")
 
-if not st.session_state.queue and not st.session_state.uploads:
-    st.write("No items in the queue yet.")
+# Ensure state exists
+st.session_state.setdefault("queue", [])
+st.session_state.setdefault("uploads", [])
+
+# Build combined list for display
+queue_display = []
+for item in st.session_state.queue:
+    queue_display.append(f"{item['Model']} ({item['Category']} – {item['Subcategory']})")
+for up in st.session_state.uploads:
+    queue_display.append(f"📄 {up.name}")
+
+if not queue_display:
+    st.info("No items in the queue yet.")
 else:
-    # Build combined list for sorting
-    queue_display = []
-    for item in st.session_state.queue:
-        queue_display.append(f"{item['Model']} ({item['Category']} – {item['Subcategory']})")
-    for up in st.session_state.uploads:
-        queue_display.append(f"📄 {up.name}")
+    st.markdown("### Current Files in Queue")
 
-    st.markdown("### Drag to reorder queue")
-    sorted_items = sort_items(queue_display, direction="vertical", key="queue_sort")
+    # Display list with X buttons
+    keep_queue = []
+    keep_uploads = []
 
-    # ---- Update order ----
-    new_queue, new_uploads = [], []
-    for name in sorted_items:
-        if name.startswith("📄"):
-            file_name = name.replace("📄 ", "")
-            match = next((f for f in st.session_state.uploads if f.name == file_name), None)
-            if match:
-                new_uploads.append(match)
-        else:
-            model = name.split(" (")[0]
-            match = next((q for q in st.session_state.queue if q["Model"] == model), None)
-            if match:
-                new_queue.append(match)
-    st.session_state.queue = new_queue
-    st.session_state.uploads = new_uploads
-
-    # ---- Render reordered list with remove buttons ----
-    st.markdown("### Current Order")
-    keep_queue, keep_uploads = [], []
-
-    for name in sorted_items:
-        col1, col2 = st.columns([5, 1])
+    for name in queue_display:
+        col1, col2 = st.columns([6, 1])
         with col1:
             st.write(name)
         with col2:
-            remove = st.button("🗑️", key=f"remove_{name}")
+            if st.button("❌", key=f"remove_{name}"):
+                # Skip re-adding (i.e., remove this item)
+                continue
 
-        if remove:
-            # skip re-adding to keep list
-            continue
-
+        # If not removed, keep it
         if name.startswith("📄"):
             file_name = name.replace("📄 ", "")
             match = next((f for f in st.session_state.uploads if f.name == file_name), None)
@@ -264,7 +249,7 @@ else:
             if match:
                 keep_queue.append(match)
 
-    # Save the “kept” items
+    # Save the kept items back to state
     st.session_state.queue = keep_queue
     st.session_state.uploads = keep_uploads
     
