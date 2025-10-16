@@ -224,7 +224,7 @@ else:
             st.success("Queue cleared.")
 
 # ---- Audience selection ----
-st.markdown("**Intended Customer:**")
+st.markdown("Customer Type:")
 col1, col2, col3, col4 = st.columns(4)
 with col1:
     aud_contractor = st.checkbox("Contractor")
