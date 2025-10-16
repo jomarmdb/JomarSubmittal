@@ -134,10 +134,6 @@ with st.sidebar:
         # Dynamically render drag/drop list
         sorted_items = sort_items(display_rows, direction="vertical", key="queue_sort_sidebar")
 
-        # ✅ Only rebuild queue if the sort order truly changed
-        current_order = [r.replace("⋮⋮", "").strip() for r in display_rows]
-        new_order = [r.replace("⋮⋮", "").strip() for r in sorted_items]
-
         # Rebuild queue order from sorted items
         new_queue, new_uploads = [], []
         for entry in sorted_items:
@@ -153,15 +149,16 @@ with st.sidebar:
                 if match:
                     new_queue.append(match)
 
-            st.session_state.queue = new_queue
-            st.session_state.uploads = new_uploads
-            st.toast("✅ Order updated")
+        # ✅ Update queue AFTER the for-loop (important!)
+        st.session_state.queue = new_queue
+        st.session_state.uploads = new_uploads
+        st.toast("✅ Selected File Added")
 
         st.markdown("---")
         if st.button("Clear All Files", use_container_width=True):
             st.session_state.queue.clear()
             st.session_state.uploads.clear()
-            st.toast("Queue cleared")
+            st.toast("All Files Cleared")
             st.rerun()
 
 # =========================
