@@ -223,6 +223,13 @@ else:
             st.session_state.uploads = []
             st.success("Queue cleared.")
 
+# ---- Audience selection ----
+st.markdown("**Package intended for:**")
+aud_contractor = st.checkbox("Contractor")
+aud_engineer = st.checkbox("Engineer")
+aud_distributor = st.checkbox("Distributor")
+aud_utility = st.checkbox("Utility")
+
 # ---- Cover fields ----
 st.markdown("---")
 st.subheader("Cover Page")
@@ -232,13 +239,6 @@ contractor_name = st.text_input("Contractor", "")
 date_prepared = st.date_input("Date Prepared")
 bid_date = st.date_input("Bid Date")
 logo_path = DEFAULT_LOGO_PATH
-
-# ---- Audience selection ----
-st.markdown("**Package intended for:**")
-aud_contractor = st.checkbox("Contractor")
-aud_engineer = st.checkbox("Engineer")
-aud_distributor = st.checkbox("Distributor")
-aud_utility = st.checkbox("Utility")
 
 # ---- Generate Combined PDF ----
 if st.session_state.queue or st.session_state.uploads:
