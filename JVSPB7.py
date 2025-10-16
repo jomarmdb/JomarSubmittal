@@ -222,7 +222,7 @@ else:
                         "Image": row["Image"]
                     })
                     st.toast(f"✓ Added {model}", icon="✅")
-                    st.experimental_rerun()
+                    st.rerun()
                 else:
                     st.toast(f"{model} is already in the queue.", icon="⚠️")
 
