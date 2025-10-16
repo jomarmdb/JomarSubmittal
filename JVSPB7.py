@@ -229,7 +229,7 @@ if not display_rows:
     st.info("No items in the queue yet.")
 else:
     st.markdown("Drag to Reorder Files")
-        st.markdown(
+    st.markdown(
         """
         <style>
         /* Make the sortable list expand dynamically */
