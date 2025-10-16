@@ -228,7 +228,24 @@ for up in st.session_state.uploads:
 if not display_rows:
     st.info("No items in the queue yet.")
 else:
-    st.markdown("### Reorder files (drag using ⋮⋮ handles)")
+    st.markdown("Drag to Reorder Files")
+        st.markdown(
+        """
+        <style>
+        /* Make the sortable list expand dynamically */
+        .sortable-container {
+            max-height: none !important;
+            overflow: visible !important;
+        }
+        /* Add padding so it doesn't get hidden behind sections below */
+        .block-container {
+            padding-bottom: 250px;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
     # Render draggable list (no unsupported kwargs)
     sorted_rows = sort_items(display_rows, direction="vertical", key="queue_sort")
 
