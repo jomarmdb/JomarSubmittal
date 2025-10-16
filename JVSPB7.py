@@ -231,7 +231,7 @@ project_location = st.text_input("Project Location", "")
 contractor_name = st.text_input("Contractor", "")
 date_prepared = st.date_input("Date Prepared")
 bid_date = st.date_input("Bid Date")
-logo_path = st.text_input("Logo path", DEFAULT_LOGO_PATH)
+logo_path = DEFAULT_LOGO_PATH
 
 # ---- Generate Combined PDF ----
 if st.session_state.queue or st.session_state.uploads:
