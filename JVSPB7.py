@@ -205,7 +205,7 @@ else:
 
             st.markdown(f"[**{model}**]({url})  \n{desc}")
 
-            add_key = f"add_{category}_{subcategory}_{model}_{uuid.uuid4().hex[:6]}"
+            add_key = f"add::{category}::{subcategory}::{model}"  # stable across reruns
             if st.button(f"Add {model}", key=add_key):
                 if not any(q["Model"] == model for q in st.session_state.queue):
                     st.session_state.queue.append({
