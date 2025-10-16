@@ -205,48 +205,55 @@ if uploaded_files:
 # ---- Queue / Cart panel ----
 from streamlit_sortables import sort_items
 import streamlit as st
+import uuid
 
 st.markdown("---")
 st.subheader("Queue")
 
-# Initialize state safely
+# Make sure state exists
 st.session_state.setdefault("queue", [])
 st.session_state.setdefault("uploads", [])
 
-# Build list for display
+# Build a stable display list with unique keys
 queue_display = []
 for item in st.session_state.queue:
-    queue_display.append(f"{item['Model']} ({item['Category']} – {item['Subcategory']})")
+    queue_display.append({
+        "label": f"{item['Model']} ({item['Category']} – {item['Subcategory']})",
+        "key": str(uuid.uuid4())
+    })
 for up in st.session_state.uploads:
-    queue_display.append(f"📄 {up.name}")
+    queue_display.append({
+        "label": f"📄 {up.name}",
+        "key": str(uuid.uuid4())
+    })
 
 if not queue_display:
-    st.info("No files in the queue yet.")
+    st.info("No items in the queue yet.")
 else:
     st.markdown("### Drag to reorder queue")
 
-    # Render sortable list once
-    sorted_items = sort_items(queue_display, direction="vertical", key="queue_sort")
+    # Feed list of labels to sort_items (unique keys avoid overwrite)
+    labels = [i["label"] for i in queue_display]
+    sorted_labels = sort_items(labels, direction="vertical", key="queue_sort")
 
-    # Only update state if order has changed
-    if sorted_items != queue_display:
-        new_queue, new_uploads = [], []
-        for name in sorted_items:
-            if name.startswith("📄"):
-                file_name = name.replace("📄 ", "")
-                match = next((f for f in st.session_state.uploads if f.name == file_name), None)
-                if match:
-                    new_uploads.append(match)
-            else:
-                model = name.split(" (")[0]
-                match = next((q for q in st.session_state.queue if q["Model"] == model), None)
-                if match:
-                    new_queue.append(match)
+    # Rebuild the order only after the component returns
+    new_queue, new_uploads = [], []
+    for name in sorted_labels:
+        if name.startswith("📄"):
+            file_name = name.replace("📄 ", "")
+            match = next((f for f in st.session_state.uploads if f.name == file_name), None)
+            if match:
+                new_uploads.append(match)
+        else:
+            model = name.split(" (")[0]
+            match = next((q for q in st.session_state.queue if q["Model"] == model), None)
+            if match:
+                new_queue.append(match)
 
-        st.session_state.queue = new_queue
-        st.session_state.uploads = new_uploads
-        st.toast("Order updated")
+    st.session_state.queue = new_queue
+    st.session_state.uploads = new_uploads
 
+    st.toast("✅ Order saved")
     # --- Clear Entire Queue button ---
     st.markdown("---")
     if st.button("Clear All Files"):
