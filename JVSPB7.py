@@ -218,12 +218,10 @@ st.session_state.setdefault("uploads", [])
 display_rows = []   # strings shown to the user + a hidden token we strip later
 index = 0
 for q in st.session_state.queue:
-    index += 1
     # Example: "⋮⋮ S-100CG (Ball Valves – Lead Free Brass) [#1]"
     display_rows.append(f"⋮⋮ {q['Model']} ({q['Category']} – {q['Subcategory']}) [#{index}]")
 for up in st.session_state.uploads:
-    index += 1
-    display_rows.append(f"⋮⋮ 📄 {up.name} [#{index}]")
+    display_rows.append(f"⋮⋮ 📄 {up.name}")
 
 if not display_rows:
     st.info("No items in the queue yet.")
