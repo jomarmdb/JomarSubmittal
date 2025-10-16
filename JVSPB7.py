@@ -261,6 +261,9 @@ else:
         st.success("All Files Cleared")
         st.rerun()
         
+# ---- Cover fields ----
+st.markdown("---")
+st.subheader("Cover Page")
 # ---- Audience selection ----
 st.markdown("Customer Type:")
 col1, col2, col3, col4 = st.columns(4)
@@ -272,10 +275,6 @@ with col3:
     aud_distributor = st.checkbox("Distributor")
 with col4:
     aud_utility = st.checkbox("Utility")
-
-# ---- Cover fields ----
-st.markdown("---")
-st.subheader("Cover Page")
 project_name = st.text_input("Project Name", "")
 project_location = st.text_input("Project Location", "")
 contractor_name = st.text_input("Contractor", "")
