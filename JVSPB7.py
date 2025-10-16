@@ -48,52 +48,78 @@ def make_cover_pdf(
     logo_path: str,
     project_name: str,
     project_location: str,
-    contractor: str,
+    party_label: str,
+    party_name: str,
     date_prepared,
     bid_date,
-    font_path_light: str = "",
+    bid_date_tbc: bool = False,
+    bid_date_na: bool = False,
 ):
-    from reportlab.pdfgen import canvas
-    from reportlab.lib.pagesizes import letter
-    from reportlab.pdfbase import pdfmetrics
-    from reportlab.lib.utils import ImageReader
-
     c = canvas.Canvas(outfile, pagesize=letter)
     width, height = letter
+
+    # Fonts (built-in)
+    FONT_TITLE = "Helvetica"
+    FONT_TEXT  = "Helvetica"
 
     # ---- Light gray inner border ----
     border_inset = 36
     c.setLineWidth(1)
-    c.setStrokeColorRGB(0.85, 0.85, 0.85)  # light gray
-    c.rect(border_inset, border_inset, width - 2 * border_inset, height - 2 * border_inset, stroke=1, fill=0)
+    c.setStrokeColorRGB(*hex_to_rgb01("#D9D9D9"))
+    c.rect(border_inset, border_inset, width - 2*border_inset, height - 2*border_inset, stroke=1, fill=0)
 
     # ---- Red bar ----
-    BAR_COLOR = "#BC141B"
-    bar_rgb = hex_to_rgb01(BAR_COLOR)
+    BAR_COLOR  = "#BC141B"
+    bar_rgb    = hex_to_rgb01(BAR_COLOR)
     bar_height = 140
-    bar_y = (height / 2.0) - (bar_height / 2.0)
-    bar_top_y = bar_y + bar_height
+    bar_y      = (height / 2.0) - (bar_height / 2.0)
+    bar_top_y  = bar_y + bar_height
 
     c.setFillColorRGB(*bar_rgb)
+    c.setStrokeColorRGB(*bar_rgb)
     c.rect(0, bar_y, width, bar_height, stroke=0, fill=1)
 
-    # ---- Logo ----
+    # ---- Logo: centered between page top and bar top ----
     if logo_path and os.path.exists(logo_path):
         try:
             draw_logo_centered_between_page_top_and_bar_top(
-                c, logo_path, max_width=300, page_width=width, page_height=height, bar_top_y=bar_top_y
+                c, logo_path, max_width=300,
+                page_width=width, page_height=height, bar_top_y=bar_top_y
             )
         except Exception as e:
             st.warning(f"Logo draw error: {e}")
+    else:
+        st.warning(f"Logo file not found at: {logo_path}")
 
-    # ---- White text inside red bar ----
-    c.setFillColorRGB(1, 1, 1)
-    c.setFont("Helvetica", 26)
-    c.drawCentredString(width / 2, bar_y + bar_height - 42, (project_name or "TO BE CONFIRMED").upper())
-    c.setFont("Helvetica", 18)
-    c.drawCentredString(width / 2, bar_y + bar_height - 78, (project_location or "TO BE CONFIRMED").upper())
-    c.setFont("Helvetica", 14)
-    c.drawCentredString(width / 2, bar_y + 24, "SUBMITTAL PACKAGE")
+    # ---- Title inside the bar (auto-scaling to fit) ----
+    title_lines = [
+        (project_name or "TO BE CONFIRMED").upper(),
+        (project_location or "TO BE CONFIRMED").upper(),
+        "SUBMITTAL PACKAGE",
+    ]
+    sizes, dyn_leading = fit_multiline_text(
+        lines=title_lines,
+        font_name=FONT_TITLE,
+        bar_width=width,
+        bar_height=bar_height,
+        side_pad=48,
+        v_pad=18,
+        max_pt=30,
+        min_pt=14,
+        leading_factor=1.12,
+        letter_spacing=0.0,
+    )
+    draw_centered_stack(
+        c,
+        x_center=width / 2.0,
+        y_center=bar_y + bar_height / 2.0,
+        lines=title_lines,
+        sizes=sizes,
+        font_name=FONT_TITLE,
+        color_rgb=(1, 1, 1),
+        leading=dyn_leading,
+    )
+
 
     # ---- Bottom text block ----
     c.setFillColorRGB(0, 0, 0)
