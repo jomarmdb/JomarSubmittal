@@ -219,17 +219,16 @@ st.write("Queue count:", len(st.session_state.queue))
 st.write("Uploads count:", len(st.session_state.uploads))
 
 # --- Build display list (model name or upload name only) ---
-display_rows = []
-index = 0
+ordered_files = []
+if uploaded_files:
+    labels = [f.name for f in uploaded_files]               # show only names
+    ordered_labels = sort_labels(labels, key="file_order")  # drag & drop (or fallback)
 
-for q in st.session_state.queue:
-    index += 1
-    # add invisible ID for uniqueness
-    display_rows.append(f"⋮⋮ {q['Model']}\u200b{uuid.uuid4().hex[:6]}")
-
-for up in st.session_state.uploads:
-    index += 1
-    display_rows.append(f"⋮⋮ 📄 {up.name}\u200b{uuid.uuid4().hex[:6]}")
+    # Map the sorted names back to UploadedFile objects (handles duplicates)
+    label_to_idxs = {}
+    for i, lbl in enumerate(labels):
+        label_to_idxs.setdefault(lbl, []).append(i)
+    ordered_files = [uploaded_files[label_to_idxs[lbl].pop(0)] for lbl in ordered_labels]
 
 if not display_rows:
     st.info("No items in the queue yet.")
