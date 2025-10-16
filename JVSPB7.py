@@ -271,7 +271,7 @@ else:
         st.session_state.queue.clear()
         st.session_state.uploads.clear()
         st.success("All Files Cleared")
-        st.experimental_rerun()
+        st.rerun()
 # ---- Audience selection ----
 st.markdown("Customer Type:")
 col1, col2, col3, col4 = st.columns(4)
