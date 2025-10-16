@@ -206,6 +206,7 @@ if uploaded_files:
 from streamlit_sortables import sort_items
 import streamlit as st
 import uuid
+import re
 
 st.markdown("---")
 st.subheader("Queue")
@@ -214,25 +215,25 @@ st.subheader("Queue")
 st.session_state.setdefault("queue", [])
 st.session_state.setdefault("uploads", [])
 
-# --- Build list (only model name or file name, no HTML tags) ---
+# --- Build display list (model name or upload name only) ---
 display_rows = []
 index = 0
 
 for q in st.session_state.queue:
     index += 1
-    # Add invisible ID so duplicates don’t collapse
-    display_rows.append(f"⋮⋮ {q['Model']}\u200B{uuid.uuid4().hex[:6]}")
+    # add invisible ID for uniqueness
+    display_rows.append(f"⋮⋮ {q['Model']}\u200b{uuid.uuid4().hex[:6]}")
 
 for up in st.session_state.uploads:
     index += 1
-    display_rows.append(f"⋮⋮ 📄 {up.name}\u200B{uuid.uuid4().hex[:6]}")
+    display_rows.append(f"⋮⋮ 📄 {up.name}\u200b{uuid.uuid4().hex[:6]}")
 
 if not display_rows:
     st.info("No items in the queue yet.")
 else:
     st.markdown("### Reorder Files (drag using ⋮⋮ handles)")
 
-    # Optional styling to add spacing and borders
+    # Optional styling
     st.markdown(
         """
         <style>
@@ -246,14 +247,14 @@ else:
         unsafe_allow_html=True
     )
 
-    # --- Render sortable list ---
+    # --- Render drag list ---
     sorted_items = sort_items(display_rows, direction="vertical", key="queue_sort")
 
-    # --- Map reordered items back to actual objects ---
+    # --- Strip invisible IDs before matching ---
     new_queue, new_uploads = [], []
     for entry in sorted_items:
-        # Strip invisible ID at the end
-        name = entry[:-7].strip()
+        # remove invisible ID at end
+        name = re.sub(r"\u200b[0-9a-f]{6}$", "", entry).strip()
 
         if name.startswith("⋮⋮ 📄 "):
             file_name = name.replace("⋮⋮ 📄 ", "")
@@ -266,7 +267,7 @@ else:
             if match:
                 new_queue.append(match)
 
-    # --- Save new order ---
+    # --- Save updated order ---
     st.session_state.queue = new_queue
     st.session_state.uploads = new_uploads
     st.toast("✅ Order updated")
@@ -278,6 +279,7 @@ else:
         st.session_state.uploads.clear()
         st.toast("Queue cleared")
         st.rerun()
+        
 # ---- Cover fields ----
 st.markdown("---")
 st.subheader("Cover Page")
