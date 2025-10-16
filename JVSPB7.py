@@ -212,37 +212,19 @@ st.subheader("Queue")
 if not st.session_state.queue and not st.session_state.uploads:
     st.write("No items in the queue yet.")
 else:
-    # Build list to display: library items first, then uploads
+    # Combine queue items and uploaded PDFs into one list for sorting
     queue_display = []
     for item in st.session_state.queue:
         queue_display.append(f"{item['Model']} ({item['Category']} – {item['Subcategory']})")
     for up in st.session_state.uploads:
         queue_display.append(f"📄 {up.name}")
 
-    st.markdown("### Drag to reorder or remove items")
+    st.markdown("### Drag to reorder queue")
+    sorted_items = sort_items(queue_display, direction="vertical", key="queue_sort")
 
-    # Layout: left = draggable chips, right = remove buttons aligned by row
-    left, right = st.columns([6, 1])
-
-    # --- LEFT: render draggable list and get new order ---
-    with left:
-        sorted_items = sort_items(queue_display, direction="vertical", key="queue_sort")
-
-    # --- RIGHT: render ONLY remove buttons (no duplicate names) ---
-    # Keep lists we'll rebuild in the selected order, minus removals
+    # Update the internal order to match user drag order
     new_queue, new_uploads = [], []
-    removed_names = set()
-
-    with right:
-        st.write("")  # spacer to align with top
-        for name in sorted_items:
-            if st.button("🗑️", key=f"remove_{name}"):
-                removed_names.add(name)
-
-    # Rebuild ordered lists after removals
     for name in sorted_items:
-        if name in removed_names:
-            continue
         if name.startswith("📄"):
             file_name = name.replace("📄 ", "")
             match = next((f for f in st.session_state.uploads if f.name == file_name), None)
@@ -254,16 +236,15 @@ else:
             if match:
                 new_queue.append(match)
 
-    # Save back to session state
     st.session_state.queue = new_queue
     st.session_state.uploads = new_uploads
 
-    # Clear all
+    # Add Clear Queue button
     st.markdown("---")
-    if st.button("Clear All Files"):
+    if st.button("Clear Entire Queue"):
         st.session_state.queue = []
         st.session_state.uploads = []
-        st.success("All Files Cleared")
+        st.success("All Items Cleared")
 
 # ---- Audience selection ----
 st.markdown("Customer Type:")
