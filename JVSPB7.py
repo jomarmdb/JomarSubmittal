@@ -238,7 +238,11 @@ else:
     st.session_state.queue = new_queue
     st.session_state.uploads = new_uploads
 
-    st.success("✅ Drag order saved automatically.")
+# Clear Queue button
+if st.button("🗑️ Clear Queue"):
+    st.session_state.queue = []
+    st.session_state.uploads = []
+    st.success("Queue cleared.")
 
 # ---- Audience selection ----
 st.markdown("Customer Type:")
