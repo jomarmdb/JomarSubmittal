@@ -152,7 +152,7 @@ st.title("Valve Spec Sheet Combiner — Catalog View")
 st.caption("Select by Category → Subcategory → Product. Add uploads, manage a queue, and generate a combined PDF with a Jomar-styled cover.")
 
 EXCEL_PATH = "spec_links_images.xlsx"
-DEFAULT_LOGO_PATH = r"C:\Users\Matt.Bianchi\OneDrive - jomar.com\Jomar\Company Info\Logos\Jomar Valve Logo Red.png"
+DEFAULT_LOGO_PATH = r"C:\Users\matt.bianchi\OneDrive - jomar.com\Jomar\Specification Sales\Projects\Spec Package Builder\App\Current2\Jomar Valve Logo Red.png"
 PROXIMA_TTF = ""
 
 @st.cache_data(show_spinner=False)
