@@ -43,46 +43,80 @@ def draw_logo_centered_between_page_top_and_bar_top(c, logo_path, max_width, pag
     y = min(y, page_height - h - 24)
     c.drawImage(logo_path, x, y, width=w, height=h, preserveAspectRatio=True, mask='auto')
 
-def make_cover_pdf(outfile: str, logo_path: str, project_name: str, project_location: str,
-                   contractor: str, date_prepared, bid_date, font_path_light: str = ""):
+def make_cover_pdf(
+    outfile: str,
+    logo_path: str,
+    project_name: str,
+    project_location: str,
+    contractor: str,
+    date_prepared,
+    bid_date,
+    font_path_light: str = "",
+):
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.pagesizes import letter
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.lib.utils import ImageReader
+
     c = canvas.Canvas(outfile, pagesize=letter)
     width, height = letter
-    font_light = try_register_font(font_path_light, "ProximaNova-Light")
 
+    # ---- Light gray inner border ----
+    border_inset = 36
+    c.setLineWidth(1)
+    c.setStrokeColorRGB(0.85, 0.85, 0.85)  # light gray
+    c.rect(border_inset, border_inset, width - 2 * border_inset, height - 2 * border_inset, stroke=1, fill=0)
+
+    # ---- Red bar ----
     BAR_COLOR = "#BC141B"
     bar_rgb = hex_to_rgb01(BAR_COLOR)
-    bar_height = 150
-    bar_y = (height / 2) - 10
+    bar_height = 140
+    bar_y = (height / 2.0) - (bar_height / 2.0)
     bar_top_y = bar_y + bar_height
 
     c.setFillColorRGB(*bar_rgb)
     c.rect(0, bar_y, width, bar_height, stroke=0, fill=1)
 
+    # ---- Logo ----
     if logo_path and os.path.exists(logo_path):
-        draw_logo_centered_between_page_top_and_bar_top(
-            c, logo_path, max_width=220, page_width=width, page_height=height, bar_top_y=bar_top_y
-        )
+        try:
+            draw_logo_centered_between_page_top_and_bar_top(
+                c, logo_path, max_width=300, page_width=width, page_height=height, bar_top_y=bar_top_y
+            )
+        except Exception as e:
+            st.warning(f"Logo draw error: {e}")
 
+    # ---- White text inside red bar ----
     c.setFillColorRGB(1, 1, 1)
-    c.setFont(font_light, 24)
-    c.drawCentredString(width/2, bar_y + bar_height - 40, (project_name or "PROJECT NAME").upper())
-    c.setFont(font_light, 16)
-    c.drawCentredString(width/2, bar_y + bar_height - 72, (project_location or "PROJECT LOCATION").upper())
-    c.setFont(font_light, 13)
-    c.drawCentredString(width/2, bar_y + 22, "SUBMITTAL PACKAGE")
+    c.setFont("Helvetica", 26)
+    c.drawCentredString(width / 2, bar_y + bar_height - 42, (project_name or "TO BE CONFIRMED").upper())
+    c.setFont("Helvetica", 18)
+    c.drawCentredString(width / 2, bar_y + bar_height - 78, (project_location or "TO BE CONFIRMED").upper())
+    c.setFont("Helvetica", 14)
+    c.drawCentredString(width / 2, bar_y + 24, "SUBMITTAL PACKAGE")
 
-    left_margin = 50
-    base_y = 120
-    line_gap = 18
+    # ---- Bottom text block ----
     c.setFillColorRGB(0, 0, 0)
-    c.setFont(font_light, 11)
-    c.drawString(left_margin, base_y + line_gap * 2, f"Contractor: {(contractor or '').strip()}")
-    dp = date_prepared.strftime("%B %d, %Y") if date_prepared else ""
-    bd = bid_date.strftime("%B %d, %Y") if bid_date else ""
-    c.drawString(left_margin, base_y + line_gap, f"Date Prepared: {dp}")
-    c.drawString(left_margin, base_y, f"Bid Date: {bd}")
+    c.setFont("Helvetica", 12)
+    bottom_y = 140
+
+    contractor_txt = (contractor or "TO BE CONFIRMED").upper()
+    dp = date_prepared.strftime("%-m/%-d/%Y") if date_prepared else "TO BE CONFIRMED"
+    bd = bid_date.strftime("%-m/%-d/%Y") if bid_date else "TO BE CONFIRMED"
+
+    lines = [
+        f"CONTRACTOR: {contractor_txt}",
+        f"DATE PREPARED: {dp.upper()}",
+        f"BID DATE: {bd.upper()}",
+    ]
+
+    line_height = 18
+    for i, text in enumerate(lines):
+        c.drawCentredString(width / 2, bottom_y - (i * line_height), text)
+
     c.showPage()
     c.save()
+
 
 # =========================
 # App Configuration
