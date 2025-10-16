@@ -209,61 +209,43 @@ import streamlit as st
 st.markdown("---")
 st.subheader("Queue")
 
-# Safely initialize lists
-if "queue" not in st.session_state:
-    st.session_state.queue = []
-if "uploads" not in st.session_state:
-    st.session_state.uploads = []
+# Initialize state safely
+st.session_state.setdefault("queue", [])
+st.session_state.setdefault("uploads", [])
 
-if not st.session_state.queue and not st.session_state.uploads:
-    st.write("No Files Added")
+# Build list for display
+queue_display = []
+for item in st.session_state.queue:
+    queue_display.append(f"{item['Model']} ({item['Category']} – {item['Subcategory']})")
+for up in st.session_state.uploads:
+    queue_display.append(f"📄 {up.name}")
+
+if not queue_display:
+    st.info("No files in the queue yet.")
 else:
-    # Build combined list for sorting
-    queue_display = []
-
-    # Add library-based selections
-    for item in st.session_state.queue:
-        queue_display.append(
-            f"{item['Model']} ({item['Category']} – {item['Subcategory']})"
-        )
-
-    # Add any uploaded files
-    for up in st.session_state.uploads:
-        queue_display.append(f"📄 {up.name}")
-
-    # --- Display and reorder ---
     st.markdown("### Drag to reorder queue")
-    if queue_display:
-        sorted_items = sort_items(
-            queue_display, direction="vertical", key="queue_sort"
-        )
 
-        # Rebuild order based on new sort
+    # Render sortable list once
+    sorted_items = sort_items(queue_display, direction="vertical", key="queue_sort")
+
+    # Only update state if order has changed
+    if sorted_items != queue_display:
         new_queue, new_uploads = [], []
         for name in sorted_items:
             if name.startswith("📄"):
                 file_name = name.replace("📄 ", "")
-                match = next(
-                    (f for f in st.session_state.uploads if f.name == file_name),
-                    None,
-                )
+                match = next((f for f in st.session_state.uploads if f.name == file_name), None)
                 if match:
                     new_uploads.append(match)
             else:
                 model = name.split(" (")[0]
-                match = next(
-                    (q for q in st.session_state.queue if q["Model"] == model),
-                    None,
-                )
+                match = next((q for q in st.session_state.queue if q["Model"] == model), None)
                 if match:
                     new_queue.append(match)
 
-        # Save back to session state
         st.session_state.queue = new_queue
         st.session_state.uploads = new_uploads
-        
-    else:
-        st.info("No items to sort yet.")
+        st.toast("Order updated")
 
     # --- Clear Entire Queue button ---
     st.markdown("---")
