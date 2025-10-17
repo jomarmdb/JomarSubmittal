@@ -521,9 +521,6 @@ div[data-baseweb="notification"] {
 """, unsafe_allow_html=True)
 st.markdown("""
 <style>
-/* 🎨 Style only the "Add (model)" buttons in the catalog section */
-
-/* Match Streamlit button containers that include "Add" text */
 div[data-testid="stButton"] > button:has(span:contains("Add")) {
     background-color: #ffffff !important;   /* same gray as sidebar/info box */
     color: #000000 !important;              /* black text */
