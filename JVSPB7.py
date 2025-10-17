@@ -721,15 +721,7 @@ else:
             model = str(row["Model"])
             url   = str(row["URL"])
             desc  = str(row.get("Description", "") or "")
-            st.markdown(
-                f"""
-                <div class="model-entry">
-                    <strong>{model}</strong><br>
-                    <span class="model-desc">{desc}</span>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+            st.markdown(f"[**{model}**]  \n{desc}")
 
             add_key = f"add::{category}::{subcategory}::{model}"
             if st.button(f"Add {model}", key=add_key):
