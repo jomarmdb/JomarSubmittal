@@ -553,7 +553,7 @@ with col1:
             flex-direction: column;
             justify-content: center;
             padding-right: 1rem;
-            margin-top: -2.5rem;  /* pull header upward */
+            margin-top: -3.5rem;  /* pull header upward */
         ">
             <h1 style="margin-bottom: 0; font-size: 2.4rem; line-height: 1.2;">
                 JOMAR VALVE SUBMITTAL PACKAGE CREATOR
