@@ -492,7 +492,7 @@ st.markdown("""
     font-family: 'Proxima Nova', sans-serif !important;
     color: #000000 !important;
     text-decoration: none !important;
-    line-height: 1.4em !important;
+    line-height; 1.4em; !important;
     margin-bottom: 8px !important;
 }
 .model-entry strong {
