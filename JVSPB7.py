@@ -312,14 +312,23 @@ st.session_state.setdefault("selected_subcategory", None)
 # Sidebar (auto-expanding queue + generate + download)
 # =========================
 with st.sidebar:
-    st.markdown("### Selected Spec Sheets")
+    st.markdown("Selected Spec Sheets")
 
     # --- Always rebuild display list ---
     display_rows = []
     for q in st.session_state.queue:
-        display_rows.append(f"⋮⋮ {q['Model']}")
+        if isinstance(q, dict):
+            # Catalog item
+            display_rows.append(f"⋮⋮ {q.get('Model', 'Unnamed Model')}")
+        elif hasattr(q, "name"):
+            # Uploaded or downloaded file
+            display_rows.append(f"⋮⋮ 📄 {getattr(q, 'name', 'Unnamed File')}")
+        else:
+            # Fallback
+            display_rows.append("⋮⋮ (Unknown Item)")
     for up in st.session_state.uploads:
-        display_rows.append(f"⋮⋮ 📄 {up.name}")
+        if hasattr(up, "name"):
+            display_rows.append(f"⋮⋮ 📄 {up.name}")
 
     if not display_rows:
         st.info("No items selected yet.")
