@@ -313,7 +313,7 @@ def make_cover_pdf(
 # =====================================================
 st.set_page_config(page_title="Jomar Spec Sheet Combiner", layout="wide")
 st.title("Jomar Valve Submittal Package Builder")
-st.caption("Upload PDFs and/or select from catalog, reorder in the sidebar, then generate a combined PDF with a custom cover.")
+st.caption("Upload PDFs and/or select from below catalog, reorder in the sidebar, and generate a combined PDF with a custom cover.")
 
 # Resolve app dir + default logo path (next to this file)
 APP_DIR = Path(__file__).parent
