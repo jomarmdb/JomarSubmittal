@@ -361,9 +361,16 @@ col1, col2 = st.columns([3, 1], vertical_alignment="center")
 with col1:
     st.markdown(
         """
-        <div style="display:flex; flex-direction:column; justify-content:center;">
-            <h1 style="margin-bottom:0; font-size:2.4rem;">JOMAR VALVE SUBMITTAL PACKAGE CREATOR</h1>
-            <p style="margin-top:4px; font-size:1.1rem;">
+        <div style="
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding-right: 1rem;
+        ">
+            <h1 style="margin-bottom: 0; font-size: 2.4rem; line-height: 1.2;">
+                JOMAR VALVE SUBMITTAL PACKAGE CREATOR
+            </h1>
+            <p style="margin-top: 6px; font-size: 1.1rem; line-height: 1.4;">
                 Upload PDFs and/or select from below catalog, reorder in the sidebar, and generate a combined PDF with a custom cover.
             </p>
         </div>
@@ -372,10 +379,9 @@ with col1:
     )
 
 with col2:
-    logo_path = Path(__file__).parent / "Jomar Valve Logo Red.png"  # adjust filename if different
+    logo_path = Path(__file__).parent / "Jomar Valve Logo Red.png"
     if logo_path.exists():
-        logo = Image.open(logo_path)
-        st.image(logo, use_container_width=True)
+        st.image(str(logo_path), use_container_width=True)
     else:
         st.warning("⚠️ Jomar logo not found.")
 
