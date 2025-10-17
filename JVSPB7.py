@@ -485,6 +485,7 @@ div[data-rbd-placeholder-context-id] {
     border-radius: 3px !important;
 }
 </style>
+""", unsafe_allow_html=True)
 st.markdown("""
 <style>
 /* --- Catalog product styling --- */
