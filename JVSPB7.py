@@ -414,7 +414,7 @@ section[data-testid="stSidebar"] {
     color: white !important;
     border-radius: 3px !important;
     border: none !important;
-    font-weight: 600 !important;
+    font-weight: 500 !important;
     transition: 0.25s ease-in-out;
 }
 /* --- Drag & Drop list items (Jomar Red theme) --- */
