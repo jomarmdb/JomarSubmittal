@@ -391,14 +391,14 @@ with st.sidebar:
                 make_cover_pdf(
                     cover_tmp.name,
                     logo_path=default_logo_path,
-                    project_name=project_name,
-                    project_location=project_location,
-                    party_label=selected_role,
-                    party_name=party_name,
-                    date_prepared=date_prepared,
-                    bid_date=bid_date,
-                    bid_date_tbc=bid_date_tbc,
-                    bid_date_na=bid_date_na,
+                    project_name=st.session_state.get("project_name", ""),
+                    project_location=st.session_state.get("project_location", ""),
+                    party_label=st.session_state.get("selected_role", ""),
+                    party_name=st.session_state.get("party_name", ""),
+                    date_prepared=st.session_state.get("date_prepared", None),
+                    bid_date=st.session_state.get("bid_date", None),
+                    bid_date_tbc=st.session_state.get("bid_date_tbc", False),
+                    bid_date_na=st.session_state.get("bid_date_na", False),
                 )
                 merger = PdfMerger()
                 merger.append(cover_tmp.name)
