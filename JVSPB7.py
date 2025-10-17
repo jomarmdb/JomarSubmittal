@@ -721,7 +721,7 @@ else:
             model = str(row["Model"])
             url   = str(row["URL"])
             desc  = str(row.get("Description", "") or "")
-            st.markdown(f"[**{model}**]  \n{desc}")
+            st.markdown(f"[**{model}**]({url})  \n{desc}")
 
             add_key = f"add::{category}::{subcategory}::{model}"
             if st.button(f"Add {model}", key=add_key):
