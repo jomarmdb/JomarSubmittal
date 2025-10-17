@@ -569,5 +569,3 @@ else:
                         st.rerun()   # <— this line forces sidebar to refresh
                     except Exception as e:
                         st.warning(f"Could not add {model}: {e}")
-
-            )
