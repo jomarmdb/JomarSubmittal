@@ -658,7 +658,7 @@ with st.sidebar:
     # --- Spacer to push create/download to bottom ---
     st.markdown(
         """
-        <div style="flex-grow:1; height:320px;"></div>
+        <div style="flex-grow:1; height:400px;"></div>
         """,
         unsafe_allow_html=True
     )
