@@ -356,66 +356,49 @@ if font_path.exists():
     </style>
     """, unsafe_allow_html=True)
     
-# --- Ensure Google Material Icons load and are not overridden ---
 st.markdown("""
 <style>
+/* Load Material Icons from Google Fonts (woff2) */
 @font-face {
   font-family: 'Material Icons';
   font-style: normal;
   font-weight: 400;
-  src: url(data:font/woff2;charset=utf-8;base64,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) format('woff2');
-  font-display: swap;
+  src: url('https://fonts.gstatic.com/s/materialicons/v140/flUhRq6tzZclQEJ-Vdg-IuiaDsNc.woff2') format('woff2');
+  font-display: block;
 }
 
-/* Ensure icon ligatures render with fallback to Helvetica if missing glyphs */
+/* Apply the Material Icons font properly */
 .material-icons,
 .material-icons-outlined,
 .material-icons-round,
 .material-icons-sharp,
-.material-icons-two-tone {
-  font-family: 'Material Icons', 'Helvetica', sans-serif !important;
+.material-icons-two-tone,
+span[data-testid="stIconMaterial"],
+button[data-testid="stSidebarCollapseButton"] span,
+button[aria-label="menu"] span {
+  font-family: 'Material Icons' !important;
+  font-feature-settings: 'liga' !important;
+  -webkit-font-feature-settings: 'liga' !important;
   font-weight: normal !important;
   font-style: normal !important;
-  font-size: 24px;
+  font-size: 24px !important;
   line-height: 1;
   letter-spacing: normal;
-  text-transform: none;
+  text-transform: none !important;
   white-space: nowrap;
-  direction: ltr;
-  -webkit-font-feature-settings: 'liga';
-  -webkit-font-smoothing: antialiased;
-}
-
-/* Sidebar arrows = Jomar red */
-[data-testid="stSidebarCollapseButton"] svg {
-  fill: #BC141B !important;
+  display: inline-block;
+  vertical-align: middle;
   color: #BC141B !important;
 }
-[data-testid="stSidebarCollapseButton"]:hover svg {
+
+/* Jomar red hover effect */
+[data-testid="stSidebarCollapseButton"]:hover svg,
+[data-testid="stSidebarCollapseButton"]:hover span {
   filter: brightness(1.3);
 }
 </style>
 """, unsafe_allow_html=True)
-st.markdown("""
-<style>
-/* Force sidebar arrow ligature spans to render using Material Icons */
-span[data-testid="stIconMaterial"],
-button[data-testid="stSidebarCollapseButton"] span,
-button[aria-label="menu"] span {
-  font-family: 'Material Icons', 'Helvetica', sans-serif !important;
-  font-feature-settings: 'liga';
-  -webkit-font-feature-settings: 'liga';
-  font-style: normal !important;
-  font-weight: normal !important;
-  text-transform: none !important;
-  letter-spacing: normal !important;
-  white-space: nowrap;
-  display: inline-block;
-  vertical-align: middle;
-  color: #BC141B !important;  /* Jomar red */
-}
-</style>
-""", unsafe_allow_html=True)
+
 # --- Layout for header + logo ---
 col1, col2 = st.columns([3, 1], vertical_alignment="center")
 
