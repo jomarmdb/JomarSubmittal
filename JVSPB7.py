@@ -355,6 +355,33 @@ if font_path.exists():
     }}
     </style>
     """, unsafe_allow_html=True)
+st.markdown("""
+<style>
+[class^="material-icons"], [class*="material-icons"] {
+    font-family: 'Material Icons' !important;
+    font-weight: normal;
+    font-style: normal;
+    font-size: 24px;
+    display: inline-block;
+    line-height: 1;
+    text-transform: none;
+    letter-spacing: normal;
+    word-wrap: normal;
+    white-space: nowrap;
+    direction: ltr;
+}
+
+/* 🎨 Customize sidebar expand/collapse arrow color to Jomar Red */
+button[kind="icon"] svg {
+    fill: #BC141B !important;
+    color: #BC141B !important;
+}
+
+button[kind="icon"]:hover svg {
+    filter: brightness(1.3);
+}
+</style>
+""", unsafe_allow_html=True)
 # --- Layout for header + logo ---
 col1, col2 = st.columns([3, 1], vertical_alignment="center")
 
