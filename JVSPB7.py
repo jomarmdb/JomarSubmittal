@@ -519,6 +519,30 @@ div[data-baseweb="notification"] {
 }
 </style>
 """, unsafe_allow_html=True)
+st.markdown("""
+<style>
+/* --- Light Gray Button Theme (for Clear All + Add buttons) --- */
+button[kind="secondary"], div[data-testid="stButton"] button {
+    transition: all 0.2s ease-in-out;
+}
+
+/* Specifically target "Clear All Files" and "Add (" buttons */
+button:has(span:contains("Clear All Files")),
+button:has(span:contains("Add")) {
+    background-color: #f9f9f9 !important;
+    color: #000000 !important;
+    border: 1px solid #d0d0d0 !important;
+    border-radius: 3px !important;
+    font-weight: 500 !important;
+}
+
+button:has(span:contains("Clear All Files")):hover,
+button:has(span:contains("Add")):hover {
+    background-color: #e8e8e8 !important;
+    border-color: #c0c0c0 !important;
+}
+</style>
+""", unsafe_allow_html=True)
 # --- Layout for header + logo ---
 col1, col2 = st.columns([3, 1], vertical_alignment="center")
 
