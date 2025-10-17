@@ -380,20 +380,50 @@ with st.sidebar:
         st.toast("All Files Cleared")
         st.rerun()
 
-    # --- Generate / Download Buttons ---
-    if st.session_state.queue or st.session_state.uploads:
-        if st.button("Generate Combined PDF", type="primary", use_container_width=True):
-            st.session_state["trigger_generate"] = True
-            st.rerun()
+# --- Create / Download Buttons (Sidebar only) ---
+if st.session_state.queue or st.session_state.uploads:
+    if st.button("Create Submittal Package", type="primary", use_container_width=True):
+        # ✅ Generate the PDF immediately here (no need to rerun first)
+        cover_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+        make_cover_pdf(
+            cover_tmp.name,
+            logo_path=default_logo_path,
+            project_name=st.session_state.get("project_name", ""),
+            project_location=st.session_state.get("project_location", ""),
+            party_label=st.session_state.get("selected_role", ""),
+            party_name=st.session_state.get("party_name", ""),
+            date_prepared=st.session_state.get("date_prepared", datetime.now().date()),
+            bid_date=st.session_state.get("bid_date"),
+            bid_date_tbc=st.session_state.get("bid_date_tbc", False),
+            bid_date_na=st.session_state.get("bid_date_na", False),
+        )
 
-        if "generated_pdf" in st.session_state:
-            st.download_button(
-                "Download Combined PDF",
-                data=st.session_state["generated_pdf"],
-                file_name="Jomar Valve Submittal Package.pdf",
-                mime="application/pdf",
-                use_container_width=True
-            )
+        merger = PdfMerger()
+        merger.append(cover_tmp.name)
+        for f in st.session_state.queue:
+            try:
+                merger.append(f)
+            except Exception as e:
+                st.warning(f"Could not add {getattr(f, 'name', 'file')}: {e}")
+
+        out_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+        merger.write(out_tmp.name)
+        merger.close()
+
+        with open(out_tmp.name, "rb") as f:
+            st.session_state["generated_pdf"] = f.read()
+
+        st.toast("✅ Submittal Package Created Successfully")
+
+    if "generated_pdf" in st.session_state:
+        st.download_button(
+            "Download Submittal Package",
+            data=st.session_state["generated_pdf"],
+            file_name="Jomar Valve Submittal Package.pdf",
+            mime="application/pdf",
+            use_container_width=True
+        )
+
 # ---------------- Uploader ----------------
 st.subheader("Upload Spec Sheets")
 uploaded_files = st.file_uploader(
@@ -509,7 +539,7 @@ date_prepared = st.date_input("Date Prepared", key="dp_date")
 bid_date, bid_date_tbc, bid_date_na = bid_date_picker_with_flags("Bid Date", key="bd")
 
 # ---------------- Generate Combined PDF ----------------
-if st.session_state.queue and st.button("Generate Combined PDF", type="primary"):
+if st.session_state.queue and st.button("Create Submittal Package", type="primary"):
     cover_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
     make_cover_pdf(
         cover_tmp.name,
