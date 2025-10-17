@@ -312,7 +312,20 @@ def make_cover_pdf(
 # App UI
 # =====================================================
 st.set_page_config(page_title="Jomar Spec Sheet Combiner", layout="wide")
-st.title("Jomar Valve Submittal Package Builder")
+
+# Apply Proxima Nova to Streamlit UI
+st.markdown("""
+<style>
+@font-face {
+    font-family: "Proxima Nova";
+    src: url("Proxima Nova Font.ttf") format("truetype");
+}
+html, body, [class*="css"], .stMarkdown, .stButton button, .stTextInput input, .stSelectbox select, .stDateInput input {
+    font-family: "Proxima Nova", sans-serif !important;
+}
+</style>
+""", unsafe_allow_html=True)
+st.title("Jomar Valve Submittal Package Creator")
 st.caption("Upload PDFs and/or select from below catalog, reorder in the sidebar, and generate a combined PDF with a custom cover.")
 
 # Resolve app dir + default logo path (next to this file)
