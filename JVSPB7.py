@@ -11,6 +11,9 @@ from datetime import datetime
 from pathlib import Path
 import tempfile, os
 from reportlab.pdfbase.ttfonts import TTFont
+import os
+st.write("Current working directory:", os.getcwd())
+st.write("Files in directory:", os.listdir())
 
 # --- Register Proxima Nova (or fallback to Helvetica) ---
 FONT_PATH = Path(__file__).parent / "ProximaNova-Regular.otf"
