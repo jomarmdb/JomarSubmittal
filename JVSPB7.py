@@ -394,7 +394,7 @@ button[aria-label="menu"] span {
 /* Jomar red hover effect */
 [data-testid="stSidebarCollapseButton"]:hover svg,
 [data-testid="stSidebarCollapseButton"]:hover span {
-  filter: brightness(1.3);
+  filter: brightness(0.6);
 }
 </style>
 """, unsafe_allow_html=True)
