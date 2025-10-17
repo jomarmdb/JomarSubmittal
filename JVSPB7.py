@@ -461,7 +461,7 @@ with st.sidebar:
             )
 
 # ---------------- Uploader ----------------
-st.subheader("Upload Files")
+st.subheader("UPLOAD FILES")
 uploaded_files = st.file_uploader(
     "Add PDF spec sheets (these will appear in the sidebar queue):",
     type="pdf",
@@ -484,7 +484,7 @@ if uploaded_files:
 
 # ---------------- Catalog View ----------------
 st.markdown("---")
-st.subheader("Catalog View — Select Spec Sheets from Jomar Library")
+st.subheader("SPEC SHEET LIBRARY")
 
 EXCEL_PATH = "spec_links_images.xlsx"
 
