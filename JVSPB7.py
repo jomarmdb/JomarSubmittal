@@ -324,14 +324,19 @@ with st.sidebar:
     # --- Always rebuild display list ---
     display_rows = []
     for q in st.session_state.queue:
-        name = getattr(q, "name", None)
+        # Handle catalog-based selections (dicts)
         if isinstance(q, dict) and "Model" in q:
             display_rows.append(f"⋮⋮ {q['Model']}")
-        elif name:
-            display_rows.append(f"⋮⋮ 📄 {name}")
+        # Handle uploaded or downloaded file objects
+        elif hasattr(q, "name"):
+            clean_name = os.path.splitext(q.name)[0]  # remove .pdf extension
+            display_rows.append(f"⋮⋮ {clean_name}")
+    
+    # Also include uploaded files separately (if any)
     for up in st.session_state.uploads:
         if hasattr(up, "name"):
-            display_rows.append(f"⋮⋮ 📄 {up.name}")
+            clean_name = os.path.splitext(up.name)[0]
+            display_rows.append(f"⋮⋮ {clean_name}")
 
     if not display_rows:
         st.info("No items selected yet.")
