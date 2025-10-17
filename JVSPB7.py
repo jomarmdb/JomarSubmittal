@@ -308,40 +308,68 @@ st.session_state.setdefault("selected_category", None)
 st.session_state.setdefault("selected_subcategory", None)
 
 # ---------------- Sidebar: Queue ----------------
+# =========================
+# Sidebar (auto-expanding queue + generate + download)
+# =========================
 with st.sidebar:
-    st.markdown("**Selected Spec Sheets**")
+    st.markdown("### Selected Spec Sheets")
 
-    # Build labels from queue (one unified list)
-    labels = [getattr(f, "name", "Unnamed.pdf") for f in st.session_state.queue]
+    # --- Always rebuild display list ---
+    display_rows = []
+    for q in st.session_state.queue:
+        display_rows.append(f"⋮⋮ {q['Model']}")
+    for up in st.session_state.uploads:
+        display_rows.append(f"⋮⋮ 📄 {up.name}")
 
-    if not labels:
-        st.info("No files selected yet.")
+    if not display_rows:
+        st.info("No items selected yet.")
     else:
-        # Drag & drop (or fallback numeric UI)
-        ordered_labels = sort_labels([f"⋮⋮ {nm}" for nm in labels], key="sidebar_sort")
+        st.markdown("Click & Drag to Reorder")
 
-        # Map back to objects, supporting duplicates by consuming indices
-        raw_labels = [nm.replace("⋮⋮", "").strip() for nm in ordered_labels]
-        name_to_idxs = {}
-        for i, nm in enumerate(labels):
-            name_to_idxs.setdefault(nm, []).append(i)
+        # Unique key to force rerender when queue length changes
+        list_key = f"queue_sort_{len(st.session_state.queue)}"
 
-        new_queue = []
-        for nm in raw_labels:
-            if nm in name_to_idxs and name_to_idxs[nm]:
-                idx = name_to_idxs[nm].pop(0)
-                new_queue.append(st.session_state.queue[idx])
+        # ✅ Removed scroll restriction — list expands naturally
+        sorted_items = sort_items(display_rows, direction="vertical", key=list_key)
 
-        # Save reordered list
+        # --- Rebuild queue from sorted items ---
+        new_queue, new_uploads = [], []
+        for entry in sorted_items:
+            name = entry.replace("⋮⋮", "").strip()
+            if name.startswith("📄 "):
+                file_name = name.replace("📄 ", "")
+                match = next((f for f in st.session_state.uploads if f.name == file_name), None)
+                if match:
+                    new_uploads.append(match)
+            else:
+                model = name.strip()
+                match = next((q for q in st.session_state.queue if q["Model"] == model), None)
+                if match:
+                    new_queue.append(match)
         st.session_state.queue = new_queue
+        st.session_state.uploads = new_uploads
 
-        st.markdown("---")
-        if st.button("Clear All Files", use_container_width=True):
-            st.session_state.queue.clear()
-            st.session_state.uploads.clear()
-            st.toast("Cleared all queued files.")
+    st.markdown("---")
+    if st.button("Clear All Files", use_container_width=True):
+        st.session_state.queue.clear()
+        st.session_state.uploads.clear()
+        st.toast("All Files Cleared")
+        st.rerun()
+
+    # --- Generate / Download Buttons ---
+    if st.session_state.queue or st.session_state.uploads:
+        if st.button("Generate Combined PDF", type="primary", use_container_width=True):
+            st.session_state["trigger_generate"] = True
             st.rerun()
 
+        if "generated_pdf" in st.session_state:
+            st.download_button(
+                "⬇️ Download Combined PDF",
+                data=st.session_state["generated_pdf"],
+                file_name="Combined_Spec_Sheets.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
 # ---------------- Uploader ----------------
 st.subheader("Upload Spec Sheets")
 uploaded_files = st.file_uploader(
