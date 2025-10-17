@@ -314,12 +314,48 @@ st.session_state.setdefault("uploads", [])   # keep track of uploaded files sepa
 st.session_state.setdefault("selected_category", None)
 st.session_state.setdefault("selected_subcategory", None)
 
+# ---------------- Cover Page Inputs (must be before sidebar) ----------------
+st.markdown("---")
+st.subheader("Cover Page")
+
+# Role (mutually exclusive) → store under a consistent key
+st.session_state["selected_role"] = role_checkbox_group(key_prefix="aud")
+
+# Text inputs – write to session_state using stable keys
+st.session_state["party_name"] = st.text_input(
+    "Company",
+    st.session_state.get("party_name", ""),
+    key="party_name",
+)
+st.session_state["project_name"] = st.text_input(
+    "Project Name",
+    st.session_state.get("project_name", ""),
+    key="project_name",
+)
+st.session_state["project_location"] = st.text_input(
+    "Project Location",
+    st.session_state.get("project_location", ""),
+    key="project_location",
+)
+
+# Dates – use the same key you read later
+st.session_state["date_prepared"] = st.date_input(
+    "Date Prepared",
+    key="date_prepared"
+)
+
+# Bid Date picker returns 3 values; store them explicitly
+bd_date, bd_tbc, bd_na = bid_date_picker_with_flags("Bid Date", key="bd")
+st.session_state["bid_date"] = bd_date
+st.session_state["bid_date_tbc"] = bd_tbc
+st.session_state["bid_date_na"]  = bd_na
+
 # ---------------- Sidebar: Queue ----------------
 # =========================
 # Sidebar (auto-expanding queue + generate + download)
 # =========================
 with st.sidebar:
-    st.markdown("### Selected Spec Sheets")
+    st.markdown("Selected Spec Sheets")
 
     # --- Always rebuild display list ---
     display_rows = []
@@ -514,17 +550,5 @@ else:
                         st.rerun()   # <— this line forces sidebar to refresh
                     except Exception as e:
                         st.warning(f"Could not add {model}: {e}")
-# ---------------- Cover Page Inputs ----------------
-st.markdown("---")
-st.subheader("Cover Page")
-st.session_state["selected_role"] = role_checkbox_group(key_prefix="aud")
-st.session_state["party_name"] = st.text_input("Company", st.session_state.get("party_name", ""))
-st.session_state["project_name"] = st.text_input("Project Name", st.session_state.get("project_name", ""))
-st.session_state["project_location"] = st.text_input("Project Location", st.session_state.get("project_location", ""))
-st.session_state["date_prepared"] = st.date_input("Date Prepared", key="dp_date")
-(
-    st.session_state["bid_date"],
-    st.session_state["bid_date_tbc"],
-    st.session_state["bid_date_na"],
-) = bid_date_picker_with_flags("Bid Date", key="bd")
+
 
