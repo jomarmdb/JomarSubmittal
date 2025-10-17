@@ -655,7 +655,16 @@ with st.sidebar:
         st.toast("All Files Cleared")
         st.rerun()
 
-    # --- Create + Download inside sidebar ---
+    # --- Spacer to push create/download to bottom ---
+    st.markdown(
+        """
+        <div style="flex-grow:1; height:220px;"></div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # --- Create + Download buttons at bottom ---
+    st.markdown("---")
     if st.session_state.queue or st.session_state.uploads:
         create_btn = st.button("Create Submittal Package", type="primary", use_container_width=True)
         if create_btn:
@@ -698,7 +707,6 @@ with st.sidebar:
                 mime="application/pdf",
                 use_container_width=True
             )
-
 # ---------------- Uploader ----------------
 st.subheader("UPLOAD FILES")
 uploaded_files = st.file_uploader(
