@@ -512,10 +512,8 @@ if st.session_state.queue and st.button("Generate Combined PDF", type="primary")
     merger.write(out_tmp.name)
     merger.close()
 
-    with open(out_tmp.name, "rb") as fh:
-        st.download_button(
-            "Download Combined PDF",
-            fh,
-            file_name="Combined_Spec_Sheets.pdf",
-            mime="application/pdf"
+    # ✅ Save PDF bytes to session state for sidebar download
+    with open(out_tmp.name, "rb") as f:
+        pdf_bytes = f.read()
+        st.session_state["generated_pdf"] = pdf_bytes
         )
