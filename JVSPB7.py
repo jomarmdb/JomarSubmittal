@@ -521,15 +521,24 @@ div[data-baseweb="notification"] {
 """, unsafe_allow_html=True)
 st.markdown("""
 <style>
-div[data-testid="stButton"] > button:has(span:contains("Add")) {
-    background-color: #ffffff !important;   /* same gray as sidebar/info box */
+/* ---- Gray theme for catalog "Add" buttons only ---- */
+
+/* Match Streamlit catalog section by proximity to the main area */
+div[data-testid="stHorizontalBlock"] div.stButton > button {
+    background-color: #f9f9f9 !important;   /* same light gray as info box */
     color: #000000 !important;              /* black text */
-    border: 1px solid #f9f9f9 !important;   /* light gray border */
+    border: 1px solid #d3d3d3 !important;   /* light gray border */
     border-radius: 5px !important;
     font-weight: 500 !important;
     font-family: "Proxima Nova", sans-serif !important;
     box-shadow: none !important;
     transition: all 0.2s ease-in-out !important;
+}
+
+/* Hover effect */
+div[data-testid="stHorizontalBlock"] div.stButton > button:hover {
+    background-color: #e8e8e8 !important;
+    border-color: #c0c0c0 !important;
 }
 </style>
 """, unsafe_allow_html=True)
