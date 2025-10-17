@@ -449,7 +449,7 @@ div[data-rbd-placeholder-context-id] {
     background-color: #BC141B22 !important; /* faint red transparency */
     border-radius: 3px !important;
 }
-<style>
+</style>
 """, unsafe_allow_html=True)
 st.markdown("""
 <style>
