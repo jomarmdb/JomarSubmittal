@@ -412,7 +412,7 @@ section[data-testid="stSidebar"] {
 .stButton>button, .stDownloadButton>button {
     background-color: #BC141B !important;
     color: white !important;
-    border-radius: 8px !important;
+    border-radius: 1px !important;
     border: none !important;
     font-weight: 600 !important;
     transition: 0.25s ease-in-out;
