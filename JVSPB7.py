@@ -560,4 +560,4 @@ else:
                     except Exception as e:
                         st.warning(f"Could not add {model}: {e}")
 
-
+            )
