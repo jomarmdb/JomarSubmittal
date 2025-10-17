@@ -545,8 +545,8 @@ st.markdown("""
 <style>
 /* Reduce vertical spacing above main title area */
 [data-testid="stHeader"] {
-    padding-top: 0rem !important;   /* remove built-in top padding */
-    margin-top: 0rem !important;
+    padding-top: 0.25rem !important;   /* remove built-in top padding */
+    margin-top: 0.25rem !important;
 }
 
 /* Tighten title spacing */
