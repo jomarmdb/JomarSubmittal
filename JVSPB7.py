@@ -519,6 +519,29 @@ div[data-baseweb="notification"] {
 }
 </style>
 """, unsafe_allow_html=True)
+st.markdown("""
+<style>
+/* 🎨 Style only the "Add (model)" buttons in the catalog section */
+
+/* Match Streamlit button containers that include "Add" text */
+div[data-testid="stButton"] > button:has(span:contains("Add ")) {
+    background-color: #f9f9f9 !important;   /* same gray as sidebar/info box */
+    color: #000000 !important;              /* black text */
+    border: 1px solid #d3d3d3 !important;   /* light gray border */
+    border-radius: 5px !important;
+    font-weight: 500 !important;
+    font-family: "Proxima Nova", sans-serif !important;
+    box-shadow: none !important;
+    transition: all 0.2s ease-in-out !important;
+}
+
+/* Hover state */
+div[data-testid="stButton"] > button:has(span:contains("Add ")):hover {
+    background-color: #e8e8e8 !important;   /* slightly darker gray */
+    border-color: #c0c0c0 !important;
+}
+</style>
+""", unsafe_allow_html=True)
 # --- Layout for header + logo ---
 col1, col2 = st.columns([3, 1], vertical_alignment="center")
 
