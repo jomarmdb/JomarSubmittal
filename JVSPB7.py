@@ -314,12 +314,11 @@ def make_cover_pdf(
 # =====================================================
 st.set_page_config(page_title="Jomar Spec Sheet Combiner", layout="wide")
 
-# --- Embed Proxima Nova font into the Streamlit UI (silent fallback) ---
+# --- Embed Proxima Nova font into the Streamlit UI (full coverage + silent fallback) ---
 font_path = Path(__file__).parent / "Proxima Nova Font.ttf"
 if font_path.exists():
     with open(font_path, "rb") as f:
-        font_data = f.read()
-        font_base64 = base64.b64encode(font_data).decode()
+        font_base64 = base64.b64encode(f.read()).decode()
 
     st.markdown(f"""
     <style>
@@ -327,8 +326,10 @@ if font_path.exists():
         font-family: 'Proxima Nova';
         src: url(data:font/ttf;base64,{font_base64}) format('truetype');
     }}
-    html, body, [class*="css"], .stMarkdown, .stButton button,
-    .stTextInput input, .stSelectbox select, .stDateInput input {{
+    html, body, [class*="css"], .stMarkdown, .stButton button, .stTextInput input,
+    .stSelectbox div, .stDateInput input, .stTextArea textarea, .stRadio label,
+    .stCheckbox label, .stFileUploader label, .stDownloadButton button,
+    .stSidebar, .stSidebar div, .stSidebar header, h1, h2, h3, h4, h5, h6 {{
         font-family: 'Proxima Nova', sans-serif !important;
     }}
     </style>
@@ -460,7 +461,7 @@ with st.sidebar:
             )
 
 # ---------------- Uploader ----------------
-st.subheader("Upload Spec Sheets")
+st.subheader("Upload Files")
 uploaded_files = st.file_uploader(
     "Add PDF spec sheets (these will appear in the sidebar queue):",
     type="pdf",
