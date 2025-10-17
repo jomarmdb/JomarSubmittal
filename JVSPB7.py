@@ -341,7 +341,7 @@ st.session_state.setdefault("selected_subcategory", None)
 
 # ---------------- Cover Page Inputs ----------------
 st.markdown("---")
-st.subheader("Cover Page")
+st.subheader("COVER PAGE")
 
 # 1) Role (mutually exclusive)
 selected_role = role_checkbox_group(key_prefix="aud")
