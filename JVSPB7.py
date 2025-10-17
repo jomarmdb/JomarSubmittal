@@ -326,10 +326,30 @@ if font_path.exists():
         font-family: 'Proxima Nova';
         src: url(data:font/ttf;base64,{font_base64}) format('truetype');
     }}
-    html, body, [class*="css"], .stMarkdown, .stButton button, .stTextInput input,
-    .stSelectbox div, .stDateInput input, .stTextArea textarea, .stRadio label,
-    .stCheckbox label, .stFileUploader label, .stDownloadButton button,
-    .stSidebar, .stSidebar div, .stSidebar header, h1, h2, h3, h4, h5, h6 {{
+
+    /* --- Global Body & Text --- */
+    html, body, [class*="css"], .stApp, .stMarkdown, div, span, label, p, li, a {{
+        font-family: 'Proxima Nova', sans-serif !important;
+    }}
+
+    /* --- Sidebar --- */
+    section[data-testid="stSidebar"], .stSidebar, .stSidebar > div, .stSidebar p, .stSidebar header, .stSidebar h1, .stSidebar h2, .stSidebar h3 {{
+        font-family: 'Proxima Nova', sans-serif !important;
+    }}
+
+    /* --- Buttons, Inputs, Selects --- */
+    .stButton button, .stDownloadButton button, .stTextInput input,
+    .stSelectbox div[data-baseweb="select"], .stDateInput input, .stTextArea textarea {{
+        font-family: 'Proxima Nova', sans-serif !important;
+    }}
+
+    /* --- Headers & Subheaders --- */
+    h1, h2, h3, h4, h5, h6 {{
+        font-family: 'Proxima Nova', sans-serif !important;
+    }}
+
+    /* --- File uploader, expanders, checkboxes, etc. --- */
+    .stFileUploader label, .stExpander, .stExpander label, .stCheckbox label, .stRadio label {{
         font-family: 'Proxima Nova', sans-serif !important;
     }}
     </style>
