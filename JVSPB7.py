@@ -422,8 +422,8 @@ div[data-testid="sortable-item"],
 div[data-testid="sortable-container"] div {
     background-color: #ffffff !important;
     border: 1px solid #BC141B !important;
-    border-radius: 8px !important;
-    color: #000000 !important;
+    border-radius: 1px !important;
+    color: #BC141B !important;
     padding: 6px 10px !important;
     margin-bottom: 6px !important;
     transition: all 0.2s ease-in-out;
