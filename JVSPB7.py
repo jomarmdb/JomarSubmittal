@@ -534,7 +534,8 @@ div[data-testid="stButton"] > button:has(span:contains("Add")) {
     box-shadow: none !important;
     transition: all 0.2s ease-in-out !important;
 }
-
+</style>
+""", unsafe_allow_html=True)
 /* Hover state */
 div[data-testid="stButton"] > button:has(span:contains("Add ")):hover {
     background-color: #ffffff !important;
