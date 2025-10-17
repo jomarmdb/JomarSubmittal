@@ -632,21 +632,36 @@ with st.sidebar:
         # --- Rebuild queue order ---
         new_queue, new_uploads = [], []
         for entry in sorted_items:
-            name = entry.strip()
-            match_q = next(
-                (q for q in st.session_state.queue
-                 if (isinstance(q, dict) and q.get("Model") == name)
-                 or (getattr(q, "name", "") == f"{name}.pdf")),
-                None
-            )
-            if match_q:
-                new_queue.append(match_q)
-            match_up = next((u for u in st.session_state.uploads if os.path.splitext(u.name)[0] == name), None)
-            if match_up:
-                new_uploads.append(match_up)
+            new_queue = []
+            seen = set()
+            
+            for entry in sorted_items:
+                name = entry.strip()
+                if name in seen:
+                    continue
+                seen.add(name)
+            
+                # Match catalog-based items
+                match_catalog = next(
+                    (q for q in st.session_state.queue
+                     if isinstance(q, dict) and q.get("Model") == name),
+                    None
+                )
+                if match_catalog:
+                    new_queue.append(match_catalog)
+                    continue
+            
+                # Match uploaded file objects (by base name)
+                match_upload = next(
+                    (u for u in st.session_state.queue
+                     if hasattr(u, "name") and os.path.splitext(u.name)[0] == name),
+                    None
+                )
+                if match_upload:
+                    new_queue.append(match_upload)
     
         st.session_state.queue = new_queue
-        st.session_state.uploads = new_uploads
+
     
     st.markdown("---")
     if st.button("Clear All Files", use_container_width=True):
