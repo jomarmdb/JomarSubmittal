@@ -546,7 +546,7 @@ st.markdown("""
 <style>
 /* Reduce top padding and margin around the main title */
 h1, .stMarkdown h1, [data-testid="stHeader"] h1 {
-    margin-top: 0.25rem !important;   /* reduce space above */
+    margin-top: 0.1rem !important;   /* reduce space above */
     padding-top: 0 !important;
 }
 
