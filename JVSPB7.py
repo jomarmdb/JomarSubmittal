@@ -553,7 +553,7 @@ with col1:
             flex-direction: column;
             justify-content: center;
             padding-right: 1rem;
-            margin-top: -5.5rem;  /* pull header upward */
+            margin-top: -7.5rem;  /* pull header upward */
         ">
             <h1 style="margin-bottom: 0; font-size: 2.4rem; line-height: 1.2;">
                 JOMAR VALVE SUBMITTAL PACKAGE CREATOR
@@ -576,7 +576,7 @@ with col2:
                 align-items: center;         /* vertical centering */
                 justify-content: flex-end;   /* push logo to the right edge */
                 height: 100%;                /* match column height */
-                margin-top: -1.5rem;         /* align with header shift */
+                margin-top: -7.5rem;         /* align with header shift */
             ">
                 <img src="data:image/png;base64,{base64.b64encode(open(logo_path, 'rb').read()).decode()}"
                      alt="Jomar Valve Logo"
