@@ -203,8 +203,8 @@ def make_cover_pdf(
     c = canvas.Canvas(outfile, pagesize=letter)
     width, height = letter
 
-    FONT_TITLE = "Helvetica"
-    FONT_TEXT  = "Helvetica"
+    FONT_TITLE = "Tenorite"
+    FONT_TEXT  = "Tenorite"
 
     # Light gray inner border
     border_inset = 36
