@@ -37,7 +37,7 @@ except ImportError:
 
 # ---- Add this section to enable retries for downloads ----
 from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.util.retry import Retry
+from requests.packages.lib3.util.retry import Retry
 
 def create_session_with_retries(retries=3, backoff_factor=2):
     session = requests.Session()
@@ -325,7 +325,7 @@ if font_path.exists():
     <style>
     @font-face {{
         font-family: 'Proxima Nova';
-        src: url(data:font/ttf;base64,{font_base64}) format('truetype');
+        src: (data:font/ttf;base64,{font_base64}) format('truetype');
     }}
 
     /* --- Global Body & Text --- */
@@ -363,7 +363,7 @@ st.markdown("""
   font-family: 'Material Icons';
   font-style: normal;
   font-weight: 400;
-  src: url('https://fonts.gstatic.com/s/materialicons/v140/flUhRq6tzZclQEJ-Vdg-IuiaDsNc.woff2') format('woff2');
+  src: ('https://fonts.gstatic.com/s/materialicons/v140/flUhRq6tzZclQEJ-Vdg-IuiaDsNc.woff2') format('woff2');
   font-display: block;
 }
 
@@ -721,7 +721,15 @@ else:
             model = str(row["Model"])
             url   = str(row["URL"])
             desc  = str(row.get("Description", "") or "")
-            st.markdown(f"[**{model}**]({url})  \n{desc}")
+            st.markdown(
+                f"""
+                <div class="model-entry">
+                    <strong>{model}</strong><br>
+                    <span class="model-desc">{desc}</span>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
             add_key = f"add::{category}::{subcategory}::{model}"
             if st.button(f"Add {model}", key=add_key):
