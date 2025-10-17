@@ -382,6 +382,7 @@ button[kind="icon"]:hover svg {
 }
 </style>
 """, unsafe_allow_html=True)
+
 # --- Layout for header + logo ---
 col1, col2 = st.columns([3, 1], vertical_alignment="center")
 
