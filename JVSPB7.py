@@ -485,6 +485,25 @@ div[data-rbd-placeholder-context-id] {
     border-radius: 3px !important;
 }
 </style>
+st.markdown("""
+<style>
+/* --- Catalog product styling --- */
+.model-entry {
+    font-family: 'Proxima Nova', sans-serif !important;
+    color: #000000 !important;          /* black text */
+    text-decoration: none !important;   /* remove underline */
+    line-height: 1.4em;
+    margin-bottom: 8px;
+}
+.model-entry strong {
+    font-weight: 600;
+    font-size: 1.05rem;
+}
+.model-entry .model-desc {
+    color: #444444 !important;          /* slightly lighter description */
+    font-size: 0.9rem;
+}
+</style>
 """, unsafe_allow_html=True)
 # --- Layout for header + logo ---
 col1, col2 = st.columns([3, 1], vertical_alignment="center")
@@ -721,7 +740,15 @@ else:
             model = str(row["Model"])
             url   = str(row["URL"])
             desc  = str(row.get("Description", "") or "")
-            st.markdown(f"[**{model}**]({url})  \n{desc}")
+            st.markdown(
+                f"""
+                <div class="model-entry">
+                    <strong>{model}</strong><br>
+                    <span class="model-desc">{desc}</span>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
             add_key = f"add::{category}::{subcategory}::{model}"
             if st.button(f"Add {model}", key=add_key):
