@@ -604,7 +604,7 @@ st.session_state.setdefault("selected_subcategory", None)
 
 # ---------------- Cover Page Inputs (must be BEFORE the sidebar) ----------------
 st.markdown("---")
-st.subheader("Cover Page")
+st.subheader("COVER PAGE")
 
 # 1) Role (mutually exclusive) — store a string like "Contractor"/"Engineer"/...
 selected_role = role_checkbox_group(key_prefix="aud")
