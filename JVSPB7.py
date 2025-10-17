@@ -506,6 +506,19 @@ st.markdown("""
 }
 </style>
 """, unsafe_allow_html=True)
+st.markdown("""
+<style>
+/* --- Style the "No items selected yet." info box --- */
+div[data-testid="stNotificationContentInfo"],
+div[data-baseweb="notification"] {
+    background-color: #f9f9f9 !important;   /* Match sidebar background */
+    color: #000000 !important;              /* Black text */
+    border: 1px solid #d3d3d3 !important;   /* Thin darker gray border */
+    border-radius: 5px !important;
+    box-shadow: none !important;            /* Remove Streamlit's blue shadow */
+}
+</style>
+""", unsafe_allow_html=True)
 # --- Layout for header + logo ---
 col1, col2 = st.columns([3, 1], vertical_alignment="center")
 
