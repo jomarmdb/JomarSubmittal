@@ -619,7 +619,7 @@ with st.sidebar:
         return os.path.splitext(name)[0].strip() if name else ""
 
     labels = [_item_label(x) for x in st.session_state.queue if _item_label(x)]
-    labels = [f"⋮⋮ {lbl}" for lbl in labels]  # add handle
+    labels = [f"{lbl}" for lbl in labels]  # add handle
 
     if not labels:
         st.info("No items selected yet.")
@@ -630,7 +630,7 @@ with st.sidebar:
         sorted_items = sort_items(labels, direction="vertical", key=list_key)
 
         # ---- Rebuild queue in the new order (no duplicates) ----
-        new_names = [s.replace("⋮⋮", "").strip() for s in sorted_items]
+        new_names = [s.replace("", "").strip() for s in sorted_items]
 
         # Make a consumable pool from the current queue so duplicates (if any) keep stability
         pool = st.session_state.queue[:]
