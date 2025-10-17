@@ -12,8 +12,8 @@ from pathlib import Path
 import tempfile, os
 from reportlab.pdfbase.ttfonts import TTFont
 
-# --- Register Proxima Nova (or fallback to Helvetica) ---
-FONT_PATH = Path(__file__).parent / "ProximaNova-Regular.otf"
+# --- Register Proxima Nova Font (or fallback to Helvetica) ---
+FONT_PATH = Path(__file__).parent / "Proxima Nova Font.otf"
 
 if FONT_PATH.exists():
     try:
@@ -23,7 +23,7 @@ if FONT_PATH.exists():
         <style>
         @font-face {
             font-family: "Proxima Nova";
-            src: url("ProximaNova-Regular.otf") format("opentype");
+            src: url("Proxima Nova Font.otf") format("opentype");
         }
         html, body, [class*="css"] {
             font-family: "Proxima Nova", sans-serif;
@@ -35,7 +35,7 @@ if FONT_PATH.exists():
         st.warning(f"Could not load Proxima Nova: {e}. Falling back to Helvetica.")
         FONT_TITLE = FONT_TEXT = "Helvetica"
 else:
-    st.warning("ProximaNova-Regular.otf not found. Using Helvetica instead.")
+    st.warning("Proxima Nova Font.otf not found. Using Helvetica instead.")
     FONT_TITLE = FONT_TEXT = "Helvetica"
 
 # ---- Drag & Drop (Sortables) ----
