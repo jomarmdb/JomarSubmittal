@@ -314,6 +314,20 @@ def make_cover_pdf(
 # App UI
 # =====================================================
 st.set_page_config(page_title="Jomar Spec Sheet Combiner", layout="wide")
+st.markdown("""
+<style>
+/* Reduce top padding and margin around the main title */
+h1, .stMarkdown h1, [data-testid="stHeader"] h1 {
+    margin-top: 0.25rem !important;   /* reduce space above */
+    padding-top: 0 !important;
+}
+
+/* Also reduce space between title and subtitle */
+h1 + p, .stMarkdown h1 + p {
+    margin-top: 0.25rem !important;   /* tighten gap below title */
+}
+</style>
+""", unsafe_allow_html=True)
 
 # --- Embed Proxima Nova font into the Streamlit UI (full coverage + silent fallback) ---
 font_path = Path(__file__).parent / "Proxima Nova Font.ttf"
@@ -395,20 +409,6 @@ button[aria-label="menu"] span {
 [data-testid="stSidebarCollapseButton"]:hover svg,
 [data-testid="stSidebarCollapseButton"]:hover span {
   filter: brightness(0.6);
-}
-</style>
-""", unsafe_allow_html=True)
-st.markdown("""
-<style>
-/* Reduce top padding and margin around the main title */
-h1, .stMarkdown h1, [data-testid="stHeader"] h1 {
-    margin-top: 0.25rem !important;   /* reduce space above */
-    padding-top: 0 !important;
-}
-
-/* Also reduce space between title and subtitle */
-h1 + p, .stMarkdown h1 + p {
-    margin-top: 0.25rem !important;   /* tighten gap below title */
 }
 </style>
 """, unsafe_allow_html=True)
