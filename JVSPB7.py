@@ -314,48 +314,23 @@ st.session_state.setdefault("uploads", [])   # keep track of uploaded files sepa
 st.session_state.setdefault("selected_category", None)
 st.session_state.setdefault("selected_subcategory", None)
 
-# ---------------- Cover Page Inputs (must be AFTER helper defs and BEFORE sidebar) ----------------
+# ---------------- Cover Page Inputs ----------------
 st.markdown("---")
 st.subheader("Cover Page")
 
 # 1) Role (mutually exclusive)
 selected_role = role_checkbox_group(key_prefix="aud")
-st.session_state["selected_role"] = selected_role
 
 # 2) Company / Project fields
-party_name = st.text_input(
-    "Company",
-    st.session_state.get("party_name", ""),
-    key="party_name"
-)
-st.session_state["party_name"] = party_name
-
-project_name = st.text_input(
-    "Project Name",
-    st.session_state.get("project_name", ""),
-    key="project_name"
-)
-st.session_state["project_name"] = project_name
-
-project_location = st.text_input(
-    "Project Location",
-    st.session_state.get("project_location", ""),
-    key="project_location"
-)
-st.session_state["project_location"] = project_location
+party_name = st.text_input("Company", st.session_state.get("party_name", ""), key="party_name")
+project_name = st.text_input("Project Name", st.session_state.get("project_name", ""), key="project_name")
+project_location = st.text_input("Project Location", st.session_state.get("project_location", ""), key="project_location")
 
 # 3) Date Prepared
-date_prepared = st.date_input(
-    "Date Prepared",
-    key="date_prepared"
-)
-st.session_state["date_prepared"] = date_prepared
+date_prepared = st.date_input("Date Prepared", key="date_prepared")
 
-# 4) Bid Date picker returns 3 values; store explicitly
-bd_date, bd_tbc, bd_na = bid_date_picker_with_flags("Bid Date", key="bd")
-st.session_state["bid_date"] = bd_date
-st.session_state["bid_date_tbc"] = bd_tbc
-st.session_state["bid_date_na"] = bd_na
+# 4) Bid Date picker
+bid_date, bid_date_tbc, bid_date_na = bid_date_picker_with_flags("Bid Date", key="bd")
 
 # ---------------- Sidebar: Queue ----------------
 with st.sidebar:
@@ -416,16 +391,15 @@ with st.sidebar:
                 make_cover_pdf(
                     cover_tmp.name,
                     logo_path=default_logo_path,
-                    project_name=st.session_state.get("project_name", ""),
-                    project_location=st.session_state.get("project_location", ""),
-                    party_label=st.session_state.get("selected_role", ""),
-                    party_name=st.session_state.get("party_name", ""),
-                    date_prepared=st.session_state.get("date_prepared", datetime.now().date()),
-                    bid_date=st.session_state.get("bid_date"),
-                    bid_date_tbc=st.session_state.get("bid_date_tbc", False),
-                    bid_date_na=st.session_state.get("bid_date_na", False),
+                    project_name=project_name,
+                    project_location=project_location,
+                    party_label=selected_role,
+                    party_name=party_name,
+                    date_prepared=date_prepared,
+                    bid_date=bid_date,
+                    bid_date_tbc=bid_date_tbc,
+                    bid_date_na=bid_date_na,
                 )
-
                 merger = PdfMerger()
                 merger.append(cover_tmp.name)
                 for f in st.session_state.queue:
