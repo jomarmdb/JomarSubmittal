@@ -537,8 +537,8 @@ div[data-testid="stButton"] > button:has(span:contains("Add ")) {
 
 /* Hover state */
 div[data-testid="stButton"] > button:has(span:contains("Add ")):hover {
-    background-color: #e8e8e8 !important;   /* slightly darker gray */
-    border-color: #c0c0c0 !important;
+    background-color: #ffffff !important;
+    border-color: #e8e8e8 !important;
 }
 </style>
 """, unsafe_allow_html=True)
