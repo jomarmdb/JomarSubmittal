@@ -412,7 +412,7 @@ section[data-testid="stSidebar"] {
 .stButton>button, .stDownloadButton>button {
     background-color: #BC141B !important;
     color: white !important;
-    border-radius: 1px !important;
+    border-radius: 3px !important;
     border: none !important;
     font-weight: 600 !important;
     transition: 0.25s ease-in-out;
@@ -420,9 +420,9 @@ section[data-testid="stSidebar"] {
 /* --- Drag & Drop list items --- */
 div[data-testid="sortable-item"], 
 div[data-testid="sortable-container"] div {
-    background-color: #ffffff !important;
+    background-color: #BC141B !important;
     border: 1px solid #BC141B !important;
-    border-radius: 1px !important;
+    border-radius: 3px !important;
     color: #BC141B !important;
     padding: 6px 10px !important;
     margin-bottom: 6px !important;
