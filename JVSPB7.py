@@ -516,4 +516,4 @@ if st.session_state.queue and st.button("Generate Combined PDF", type="primary")
     with open(out_tmp.name, "rb") as f:
         pdf_bytes = f.read()
         st.session_state["generated_pdf"] = pdf_bytes
-    )
+    
