@@ -524,10 +524,10 @@ st.markdown("""
 /* 🎨 Style only the "Add (model)" buttons in the catalog section */
 
 /* Match Streamlit button containers that include "Add" text */
-div[data-testid="stButton"] > button:has(span:contains("Add ")) {
-    background-color: #f9f9f9 !important;   /* same gray as sidebar/info box */
+div[data-testid="stButton"] > button:has(span:contains("Add")) {
+    background-color: #ffffff !important;   /* same gray as sidebar/info box */
     color: #000000 !important;              /* black text */
-    border: 1px solid #d3d3d3 !important;   /* light gray border */
+    border: 1px solid #f9f9f9 !important;   /* light gray border */
     border-radius: 5px !important;
     font-weight: 500 !important;
     font-family: "Proxima Nova", sans-serif !important;
