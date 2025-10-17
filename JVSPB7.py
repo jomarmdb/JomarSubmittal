@@ -545,7 +545,10 @@ div[data-testid="stHorizontalBlock"] div.stButton > button:hover {
 st.markdown("""
 <style>
 /* 🎨 Light-gray theme for the "Clear All Files" sidebar button */
-section[data-testid="stSidebar"] div[data-testid="stButton"] > button:has(span:contains("Clear All Files")) {
+
+/* Target the button by order in the sidebar: 
+   The Clear All button is usually the first button inside stSidebar after the queue. */
+section[data-testid="stSidebar"] div[data-testid="stButton"]:first-of-type > button {
     all: unset !important;
     display: block !important;
     width: 100% !important;
@@ -562,8 +565,8 @@ section[data-testid="stSidebar"] div[data-testid="stButton"] > button:has(span:c
     transition: all 0.2s ease-in-out !important;
 }
 
-/* Hover effect */
-section[data-testid="stSidebar"] div[data-testid="stButton"] > button:has(span:contains("Clear All Files")):hover {
+/* Hover state */
+section[data-testid="stSidebar"] div[data-testid="stButton"]:first-of-type > button:hover {
     background-color: #e8e8e8 !important;
     border-color: #c0c0c0 !important;
 }
