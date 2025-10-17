@@ -609,57 +609,44 @@ st.session_state["bid_date_na"] = bd_na
 with st.sidebar:
     st.markdown("Selected Spec Sheets")
 
-    # --- Always rebuild display list ---
-    display_rows = []
-    for q in st.session_state.queue:
-        if isinstance(q, dict) and "Model" in q:
-            display_rows.append(f"{q['Model']}")
-        elif hasattr(q, "name"):
-            clean_name = os.path.splitext(q.name)[0]
-            display_rows.append(f"{clean_name}")
-    for up in st.session_state.uploads:
-        if hasattr(up, "name"):
-            clean_name = os.path.splitext(up.name)[0]
-            display_rows.append(f"{clean_name}")
-    
-    if not display_rows:
+# ---- Build display list from QUEUE ONLY ----
+    def _item_label(obj):
+        # Catalog item (dict)
+        if isinstance(obj, dict) and "Model" in obj:
+            return str(obj["Model"]).strip()
+        # Uploaded/Downloaded file object
+        name = getattr(obj, "name", "")
+        return os.path.splitext(name)[0].strip() if name else ""
+
+    labels = [_item_label(x) for x in st.session_state.queue if _item_label(x)]
+    labels = [f"⋮⋮ {lbl}" for lbl in labels]  # add handle
+
+    if not labels:
         st.info("No items selected yet.")
     else:
         st.markdown("Click & Drag to Reorder")
-        list_key = f"queue_sort_{len(display_rows)}"
-        sorted_items = sort_items(display_rows, direction="vertical", key=list_key)
+
+        list_key = f"queue_sort_{len(labels)}"
+        sorted_items = sort_items(labels, direction="vertical", key=list_key)
     
-        # --- Rebuild queue order ---
-        new_queue, new_uploads = [], []
-        for entry in sorted_items:
-            new_queue = []
-            seen = set()
-            
-            for entry in sorted_items:
-                name = entry.strip()
-                if name in seen:
-                    continue
-                seen.add(name)
-            
-                # Match catalog-based items
-                match_catalog = next(
-                    (q for q in st.session_state.queue
-                     if isinstance(q, dict) and q.get("Model") == name),
-                    None
-                )
-                if match_catalog:
-                    new_queue.append(match_catalog)
-                    continue
-            
-                # Match uploaded file objects (by base name)
-                match_upload = next(
-                    (u for u in st.session_state.queue
-                     if hasattr(u, "name") and os.path.splitext(u.name)[0] == name),
-                    None
-                )
-                if match_upload:
-                    new_queue.append(match_upload)
-    
+# ---- Rebuild queue in the new order (no duplicates) ----
+        new_names = [s.replace("⋮⋮", "").strip() for s in sorted_items]
+
+        # Make a consumable pool from the current queue so duplicates (if any) keep stability
+        pool = st.session_state.queue[:]
+
+        def _match_and_pop(name, pool_list):
+            for i, obj in enumerate(pool_list):
+                if _item_label(obj) == name:
+                    return pool_list.pop(i)
+            return None
+
+        new_queue = []
+        for nm in new_names:
+            matched = _match_and_pop(nm, pool)
+            if matched is not None:
+                new_queue.append(matched)
+
         st.session_state.queue = new_queue
 
     
