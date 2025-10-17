@@ -553,6 +553,7 @@ with col1:
             flex-direction: column;
             justify-content: center;
             padding-right: 1rem;
+            margin-top: -1.5rem;  /* pull header upward */
         ">
             <h1 style="margin-bottom: 0; font-size: 2.4rem; line-height: 1.2;">
                 JOMAR VALVE SUBMITTAL PACKAGE CREATOR
@@ -568,7 +569,22 @@ with col1:
 with col2:
     logo_path = Path(__file__).parent / "Jomar Valve Logo Red.png"
     if logo_path.exists():
-        st.image(str(logo_path), use_container_width=True)
+        st.markdown(
+            f"""
+            <div style="
+                display: flex;
+                align-items: center;         /* vertical centering */
+                justify-content: flex-end;   /* push logo to the right edge */
+                height: 100%;                /* match column height */
+                margin-top: -1.5rem;         /* align with header shift */
+            ">
+                <img src="data:image/png;base64,{base64.b64encode(open(logo_path, 'rb').read()).decode()}"
+                     alt="Jomar Valve Logo"
+                     style="max-width: 100%; height: auto;"/>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
     else:
         st.warning("⚠️ Jomar logo not found.")
 
