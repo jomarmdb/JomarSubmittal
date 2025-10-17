@@ -641,8 +641,8 @@ with st.sidebar:
                     project_location=st.session_state.get("project_location", ""),
                     party_label=st.session_state.get("selected_role", ""),
                     party_name=st.session_state.get("party_name", ""),
-                    date_prepared=st.session_state.get("date_prepared", None),
-                    bid_date=st.session_state.get("bid_date", None),
+                    date_prepared=st.session_state.get("date_prepared", datetime.now().date()),
+                    bid_date=st.session_state.get("bid_date"),
                     bid_date_tbc=st.session_state.get("bid_date_tbc", False),
                     bid_date_na=st.session_state.get("bid_date_na", False),
                 )
