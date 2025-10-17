@@ -554,6 +554,11 @@ div[data-testid="stButton"] > button:hover {
     background-color: #e8e8e8 !important;
     border-color: #c0c0c0 !important;
 }
+
+/* Optional enhancement: remove shadows for flat style */
+div[data-testid="stButton"] > button {
+    box-shadow: none !important;
+}
 </style>
 """, unsafe_allow_html=True)
 # --- Layout for header + logo ---
