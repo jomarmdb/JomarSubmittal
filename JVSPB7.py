@@ -12,6 +12,7 @@ from pathlib import Path
 import tempfile, os
 from reportlab.pdfbase.ttfonts import TTFont
 import base64
+from PIL import Image
 
 # --- Register Proxima Nova Font (or fallback to Helvetica) ---
 
@@ -354,8 +355,29 @@ if font_path.exists():
     }}
     </style>
     """, unsafe_allow_html=True)
-st.header("JOMAR VALVE SUBMITTAL PACKAGE CREATOR")
-st.write("Upload PDFs and/or select from below catalog, reorder in the sidebar, and generate a combined PDF with a custom cover.")
+# --- Layout for header + logo ---
+col1, col2 = st.columns([3, 1], vertical_alignment="center")
+
+with col1:
+    st.markdown(
+        """
+        <div style="display:flex; flex-direction:column; justify-content:center;">
+            <h1 style="margin-bottom:0; font-size:2.4rem;">JOMAR VALVE SUBMITTAL PACKAGE CREATOR</h1>
+            <p style="margin-top:4px; font-size:1.1rem;">
+                Upload PDFs and/or select from below catalog, reorder in the sidebar, and generate a combined PDF with a custom cover.
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+with col2:
+    logo_path = Path(__file__).parent / "Jomar Valve Logo Red.png"  # adjust filename if different
+    if logo_path.exists():
+        logo = Image.open(logo_path)
+        st.image(logo, use_container_width=True)
+    else:
+        st.warning("⚠️ Jomar logo not found.")
 
 # Resolve app dir + default logo path (next to this file)
 APP_DIR = Path(__file__).parent
