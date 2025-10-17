@@ -13,7 +13,7 @@ import tempfile, os
 from reportlab.pdfbase.ttfonts import TTFont
 
 # --- Register Proxima Nova Font (or fallback to Helvetica) ---
-FONT_PATH = Path(__file__).parent / "Proxima Nova Font.otf"
+FONT_PATH = Path(__file__).parent / "Proxima Nova Font.ttf"
 
 if FONT_PATH.exists():
     try:
