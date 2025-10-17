@@ -560,23 +560,27 @@ st.session_state.setdefault("uploads", [])   # keep track of uploaded files sepa
 st.session_state.setdefault("selected_category", None)
 st.session_state.setdefault("selected_subcategory", None)
 
-# ---------------- Cover Page Inputs ----------------
+# ---------------- Cover Page Inputs (must be BEFORE the sidebar) ----------------
 st.markdown("---")
-st.subheader("COVER PAGE")
+st.subheader("Cover Page")
 
-# 1) Role (mutually exclusive)
+# 1) Role (mutually exclusive) — store a string like "Contractor"/"Engineer"/...
 selected_role = role_checkbox_group(key_prefix="aud")
+st.session_state["selected_role"] = selected_role  # can be None if not yet chosen
 
-# 2) Company / Project fields
+# 2) Company / Project text inputs (keys ensure values live in session_state)
 party_name = st.text_input("Company", st.session_state.get("party_name", ""), key="party_name")
 project_name = st.text_input("Project Name", st.session_state.get("project_name", ""), key="project_name")
 project_location = st.text_input("Project Location", st.session_state.get("project_location", ""), key="project_location")
 
-# 3) Date Prepared
+# 3) Date Prepared (simple date)
 date_prepared = st.date_input("Date Prepared", key="date_prepared")
 
-# 4) Bid Date picker
-bid_date, bid_date_tbc, bid_date_na = bid_date_picker_with_flags("Bid Date", key="bd")
+# 4) Bid Date with flags; write all three explicitly into session_state
+bd_date, bd_tbc, bd_na = bid_date_picker_with_flags("Bid Date", key="bd")
+st.session_state["bid_date"] = bd_date
+st.session_state["bid_date_tbc"] = bd_tbc
+st.session_state["bid_date_na"] = bd_na
 
 # ---------------- Sidebar: Queue ----------------
 with st.sidebar:
@@ -639,10 +643,10 @@ with st.sidebar:
                     logo_path=default_logo_path,
                     project_name=st.session_state.get("project_name", ""),
                     project_location=st.session_state.get("project_location", ""),
-                    party_label=st.session_state.get("selected_role", ""),
+                    party_label=st.session_state.get("selected_role", ""),   # e.g., "Contractor"
                     party_name=st.session_state.get("party_name", ""),
-                    date_prepared=st.session_state.get("date_prepared", datetime.now().date()),
-                    bid_date=st.session_state.get("bid_date"),
+                    date_prepared=st.session_state.get("date_prepared"),     # a date object
+                    bid_date=st.session_state.get("bid_date"),               # a date or None
                     bid_date_tbc=st.session_state.get("bid_date_tbc", False),
                     bid_date_na=st.session_state.get("bid_date_na", False),
                 )
