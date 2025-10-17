@@ -319,20 +319,16 @@ st.session_state.setdefault("selected_subcategory", None)
 # Sidebar (auto-expanding queue + generate + download)
 # =========================
 with st.sidebar:
-    st.markdown("Selected Spec Sheets")
+    st.markdown("### Selected Spec Sheets")
 
     # --- Always rebuild display list ---
     display_rows = []
     for q in st.session_state.queue:
-        if isinstance(q, dict):
-            # Catalog item
-            display_rows.append(f"⋮⋮ {q.get('Model', 'Unnamed Model')}")
-        elif hasattr(q, "name"):
-            # Uploaded or downloaded file
-            display_rows.append(f"⋮⋮ 📄 {getattr(q, 'name', 'Unnamed File')}")
-        else:
-            # Fallback
-            display_rows.append("⋮⋮ (Unknown Item)")
+        name = getattr(q, "name", None)
+        if isinstance(q, dict) and "Model" in q:
+            display_rows.append(f"⋮⋮ {q['Model']}")
+        elif name:
+            display_rows.append(f"⋮⋮ 📄 {name}")
     for up in st.session_state.uploads:
         if hasattr(up, "name"):
             display_rows.append(f"⋮⋮ 📄 {up.name}")
@@ -343,31 +339,34 @@ with st.sidebar:
         st.markdown("Click & Drag to Reorder")
 
         # Unique key to force rerender when queue length changes
-        list_key = f"queue_sort_{len(st.session_state.queue)}"
-
-        # ✅ Removed scroll restriction — list expands naturally
+        list_key = f"queue_sort_{len(display_rows)}"
         sorted_items = sort_items(display_rows, direction="vertical", key=list_key)
 
-        # --- Rebuild queue from sorted items ---
+        # --- Rebuild only if the order changed ---
         new_queue, new_uploads = [], []
         for entry in sorted_items:
             name = entry.replace("⋮⋮", "").strip()
             if name.startswith("📄 "):
                 file_name = name.replace("📄 ", "")
-                match = next((f for f in st.session_state.uploads if f.name == file_name), None)
+                match = next((f for f in st.session_state.uploads if getattr(f, "name", "") == file_name), None)
                 if match:
                     new_uploads.append(match)
             else:
                 model = name.strip()
-                match = next((q for q in st.session_state.queue if q["Model"] == model), None)
+                match = next((q for q in st.session_state.queue if isinstance(q, dict) and q.get("Model") == model), None)
                 if match:
                     new_queue.append(match)
+                else:
+                    # Also match against UploadedFile objects where .name == model.pdf
+                    match = next((f for f in st.session_state.queue if getattr(f, "name", "") == f"{model}.pdf"), None)
+                    if match:
+                        new_queue.append(match)
 
-        # ✅ Moved OUTSIDE the for-loop (this fixes your “only one item shows” bug)
-        if new_queue != st.session_state.queue or new_uploads != st.session_state.uploads:
-            st.session_state.queue = new_queue
-            st.session_state.uploads = new_uploads
-            st.toast("✅ Order updated")
+        # ✅ Only update if the sorted order is different
+        if new_queue or new_uploads:
+            if new_queue != st.session_state.queue or new_uploads != st.session_state.uploads:
+                st.session_state.queue = new_queue
+                st.session_state.uploads = new_uploads
 
     st.markdown("---")
     if st.button("Clear All Files", use_container_width=True):
