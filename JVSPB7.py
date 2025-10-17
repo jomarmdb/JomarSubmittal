@@ -318,16 +318,38 @@ st.session_state.setdefault("selected_subcategory", None)
 st.markdown("---")
 st.subheader("Cover Page")
 
-# 1) Role (mutually exclusive) — store into session_state
-st.session_state["selected_role"] = role_checkbox_group(key_prefix="aud")
+# 1) Role (mutually exclusive)
+selected_role = role_checkbox_group(key_prefix="aud")
+st.session_state["selected_role"] = selected_role
 
 # 2) Company / Project fields
-st.session_state["party_name"] = st.text_input("Company", st.session_state.get("party_name", ""), key="party_name")
-st.session_state["project_name"] = st.text_input("Project Name", st.session_state.get("project_name", ""), key="project_name")
-st.session_state["project_location"] = st.text_input("Project Location", st.session_state.get("project_location", ""), key="project_location")
+party_name = st.text_input(
+    "Company",
+    st.session_state.get("party_name", ""),
+    key="party_name"
+)
+st.session_state["party_name"] = party_name
 
-# 3) Dates
-st.session_state["date_prepared"] = st.date_input("Date Prepared", key="date_prepared")
+project_name = st.text_input(
+    "Project Name",
+    st.session_state.get("project_name", ""),
+    key="project_name"
+)
+st.session_state["project_name"] = project_name
+
+project_location = st.text_input(
+    "Project Location",
+    st.session_state.get("project_location", ""),
+    key="project_location"
+)
+st.session_state["project_location"] = project_location
+
+# 3) Date Prepared
+date_prepared = st.date_input(
+    "Date Prepared",
+    key="date_prepared"
+)
+st.session_state["date_prepared"] = date_prepared
 
 # 4) Bid Date picker returns 3 values; store explicitly
 bd_date, bd_tbc, bd_na = bid_date_picker_with_flags("Bid Date", key="bd")
