@@ -355,28 +355,28 @@ if font_path.exists():
     }}
     </style>
     """, unsafe_allow_html=True)
+    
 # --- Ensure Google Material Icons load and are not overridden ---
 st.markdown("""
 <style>
-/* 1) Load Material Icons from Google (woff2 is small + fast) */
 @font-face {
   font-family: 'Material Icons';
   font-style: normal;
   font-weight: 400;
-  src: url('https://fonts.gstatic.com/s/materialicons/v140/flUhRq6tzZclQEJ-Vdg-IuiaDsNc.woff2') format('woff2');
+  src: url(data:font/woff2;charset=utf-8;base64,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) format('woff2');
   font-display: swap;
 }
 
-/* 2) Force icon spans to use the Material Icons font (even with Proxima overrides) */
+/* Ensure icon ligatures render with fallback to Helvetica if missing glyphs */
 .material-icons,
 .material-icons-outlined,
 .material-icons-round,
 .material-icons-sharp,
 .material-icons-two-tone {
-  font-family: 'Material Icons' !important;
+  font-family: 'Material Icons', 'Helvetica', sans-serif !important;
   font-weight: normal !important;
   font-style: normal !important;
-  font-size: 24px;          /* adjust if you want smaller/larger arrows */
+  font-size: 24px;
   line-height: 1;
   letter-spacing: normal;
   text-transform: none;
@@ -386,9 +386,7 @@ st.markdown("""
   -webkit-font-smoothing: antialiased;
 }
 
-/* 3) Color the sidebar collapse/expand arrow to Jomar red in both old/new Streamlit UIs */
-
-/* Newer Streamlit (button renders an inline SVG) */
+/* Sidebar arrows = Jomar red */
 [data-testid="stSidebarCollapseButton"] svg {
   fill: #BC141B !important;
   color: #BC141B !important;
@@ -396,19 +394,8 @@ st.markdown("""
 [data-testid="stSidebarCollapseButton"]:hover svg {
   filter: brightness(1.3);
 }
-
-/* Older Streamlit (button renders a ligature span) */
-button[kind="icon"] .material-icons,
-button[aria-label="menu"] .material-icons {
-  color: #BC141B !important;
-}
-button[kind="icon"]:hover .material-icons,
-button[aria-label="menu"]:hover .material-icons {
-  filter: brightness(1.3);
-}
 </style>
 """, unsafe_allow_html=True)
-
 # --- Layout for header + logo ---
 col1, col2 = st.columns([3, 1], vertical_alignment="center")
 
