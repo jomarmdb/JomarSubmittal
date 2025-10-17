@@ -629,35 +629,24 @@ with st.sidebar:
         list_key = f"queue_sort_{len(display_rows)}"
         sorted_items = sort_items(display_rows, direction="vertical", key=list_key)
     
-    # --- Rebuild queue order (prevent duplicates) ---
-    new_queue = []
-    existing_names = set()
+        # --- Rebuild queue order ---
+        new_queue, new_uploads = [], []
+        for entry in sorted_items:
+            name = entry.strip()
+            match_q = next(
+                (q for q in st.session_state.queue
+                 if (isinstance(q, dict) and q.get("Model") == name)
+                 or (getattr(q, "name", "") == f"{name}.pdf")),
+                None
+            )
+            if match_q:
+                new_queue.append(match_q)
+            match_up = next((u for u in st.session_state.uploads if os.path.splitext(u.name)[0] == name), None)
+            if match_up:
+                new_uploads.append(match_up)
     
-    for entry in sorted_items:
-        name = entry.strip()
-        
-        # Look for catalog (dict) items
-        match_q = next(
-            (q for q in st.session_state.queue
-             if isinstance(q, dict) and q.get("Model") == name),
-            None
-        )
-        if match_q and name not in existing_names:
-            new_queue.append(match_q)
-            existing_names.add(name)
-            continue  # skip checking uploads if it's a catalog model
-    
-        # Look for uploaded file objects by base name
-        match_up = next(
-            (u for u in st.session_state.uploads if os.path.splitext(u.name)[0] == name),
-            None
-        )
-        if match_up and name not in existing_names:
-            new_queue.append(match_up)
-            existing_names.add(name)
-    
-    # ✅ update session state safely
-    st.session_state.queue = new_queue
+        st.session_state.queue = new_queue
+        st.session_state.uploads = new_uploads
     
     st.markdown("---")
     if st.button("Clear All Files", use_container_width=True):
@@ -666,16 +655,7 @@ with st.sidebar:
         st.toast("All Files Cleared")
         st.rerun()
 
-    # --- Spacer to push create/download to bottom ---
-    st.markdown(
-        """
-        <div style="flex-grow:1; height:320px;"></div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    # --- Create + Download buttons at bottom ---
-    st.markdown("---")
+    # --- Create + Download inside sidebar ---
     if st.session_state.queue or st.session_state.uploads:
         create_btn = st.button("Create Submittal Package", type="primary", use_container_width=True)
         if create_btn:
@@ -785,6 +765,7 @@ with cols[1]:
     st.session_state.selected_subcategory = subcategory
 
 filtered = library[(library["Category"] == category) & (library["Subcategory"] == subcategory)]
+st.markdown("### PRODUCTS")
 
 if filtered.empty:
     st.info("No products found for this selection.")
