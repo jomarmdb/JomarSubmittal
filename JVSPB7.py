@@ -11,6 +11,24 @@ from datetime import datetime
 from pathlib import Path
 import tempfile, os
 
+# ---- Add this section to enable retries for downloads ----
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
+
+def create_session_with_retries(retries=3, backoff_factor=2):
+    session = requests.Session()
+    retry = Retry(
+        total=retries,
+        read=retries,
+        connect=retries,
+        backoff_factor=backoff_factor,
+        status_forcelist=[500, 502, 503, 504],
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    return session
+
 # =====================================================
 # Drag & drop ordering (with fallback if package missing)
 # =====================================================
@@ -417,7 +435,7 @@ else:
                     st.toast(f"{model} is already in the queue.", icon="⚠️")
                 else:
                     try:
-                        resp = requests.get(url, timeout=30)
+                        resp = requests.get(url, timeout=60)
                         resp.raise_for_status()
                         fobj = BytesIO(resp.content)
                         fobj.name = target_name
