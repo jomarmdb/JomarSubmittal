@@ -541,6 +541,32 @@ div[data-testid="stHorizontalBlock"] div.stButton > button:hover {
 }
 </style>
 """, unsafe_allow_html=True)
+st.markdown("""
+<style>
+/* Reduce vertical spacing above main title area */
+[data-testid="stHeader"] {
+    padding-top: 0rem !important;   /* remove built-in top padding */
+    margin-top: 0rem !important;
+}
+
+/* Tighten title spacing */
+h1, .stMarkdown h1 {
+    margin-top: 0.25rem !important;
+    margin-bottom: 0.25rem !important;
+    line-height: 1.2 !important;
+}
+
+/* Reduce space between title and subtitle */
+h1 + p, .stMarkdown h1 + p {
+    margin-top: 0.1rem !important;
+}
+
+/* Optional: keep overall app top padding consistent */
+.stAppViewContainer > .main {
+    padding-top: 0rem !important;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # --- Layout for header + logo ---
 col1, col2 = st.columns([3, 1], vertical_alignment="center")
