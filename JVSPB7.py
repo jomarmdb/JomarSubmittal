@@ -399,6 +399,17 @@ button[aria-label="menu"] span {
 </style>
 """, unsafe_allow_html=True)
 
+st.markdown("""
+<style>
+/* ========== JOMAR COLOR THEME EXTENSIONS ========== */
+
+/* --- Sidebar background & text --- */
+section[data-testid="stSidebar"] {
+    background-color: #f9f9f9 !important; /* Light gray background */
+    color: #000000 !important;
+}
+<style>
+""", unsafe_allow_html=True)
 # --- Layout for header + logo ---
 col1, col2 = st.columns([3, 1], vertical_alignment="center")
 
