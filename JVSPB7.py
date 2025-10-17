@@ -13,29 +13,17 @@ import tempfile, os
 from reportlab.pdfbase.ttfonts import TTFont
 
 # --- Register Proxima Nova Font (or fallback to Helvetica) ---
+
 FONT_PATH = Path(__file__).parent / "Proxima Nova Font.ttf"
 
+# Try to load Proxima Nova font quietly (no UI messages)
 if FONT_PATH.exists():
     try:
         pdfmetrics.registerFont(TTFont("ProximaNova", str(FONT_PATH)))
         FONT_TITLE = FONT_TEXT = "ProximaNova"
-        st.markdown("""
-        <style>
-        @font-face {
-            font-family: "Proxima Nova";
-            src: url("Proxima Nova Font.otf") format("opentype");
-        }
-        html, body, [class*="css"] {
-            font-family: "Proxima Nova", sans-serif;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-        st.toast("✅ Proxima Nova font loaded successfully.")
-    except Exception as e:
-        st.warning(f"Could not load Proxima Nova: {e}. Falling back to Helvetica.")
+    except Exception:
         FONT_TITLE = FONT_TEXT = "Helvetica"
 else:
-    st.warning("Proxima Nova Font.otf not found. Using Helvetica instead.")
     FONT_TITLE = FONT_TEXT = "Helvetica"
 
 # ---- Drag & Drop (Sortables) ----
