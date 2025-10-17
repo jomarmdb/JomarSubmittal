@@ -10,6 +10,33 @@ from reportlab.lib.utils import ImageReader
 from datetime import datetime
 from pathlib import Path
 import tempfile, os
+from reportlab.pdfbase.ttfonts import TTFont
+
+# --- Register Proxima Nova (or fallback to Helvetica) ---
+FONT_PATH = Path(__file__).parent / "ProximaNova-Regular.otf"
+
+if FONT_PATH.exists():
+    try:
+        pdfmetrics.registerFont(TTFont("ProximaNova", str(FONT_PATH)))
+        FONT_TITLE = FONT_TEXT = "ProximaNova"
+        st.markdown("""
+        <style>
+        @font-face {
+            font-family: "Proxima Nova";
+            src: url("ProximaNova-Regular.otf") format("opentype");
+        }
+        html, body, [class*="css"] {
+            font-family: "Proxima Nova", sans-serif;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        st.toast("✅ Proxima Nova font loaded successfully.")
+    except Exception as e:
+        st.warning(f"Could not load Proxima Nova: {e}. Falling back to Helvetica.")
+        FONT_TITLE = FONT_TEXT = "Helvetica"
+else:
+    st.warning("ProximaNova-Regular.otf not found. Using Helvetica instead.")
+    FONT_TITLE = FONT_TEXT = "Helvetica"
 
 # ---- Drag & Drop (Sortables) ----
 try:
@@ -202,9 +229,6 @@ def make_cover_pdf(
 ):
     c = canvas.Canvas(outfile, pagesize=letter)
     width, height = letter
-
-    FONT_TITLE = "Helvetica"
-    FONT_TEXT  = "Helvetica"
 
     # Light gray inner border
     border_inset = 36
