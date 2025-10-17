@@ -374,7 +374,7 @@ st.session_state["bid_date_na"] = bd_na
 
 # ---------------- Sidebar: Queue ----------------
 with st.sidebar:
-st.markdown("Selected Spec Sheets")
+    st.markdown("Selected Spec Sheets")
 
     # --- Always rebuild display list ---
     display_rows = []
