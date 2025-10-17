@@ -350,6 +350,13 @@ st.session_state["bid_date"] = bd_date
 st.session_state["bid_date_tbc"] = bd_tbc
 st.session_state["bid_date_na"]  = bd_na
 
+# ---------------- Cover Page Inputs (must be AFTER helper defs and BEFORE sidebar) ----------------
+st.markdown("---")
+st.subheader("Cover Page")
+
+# 1) Role (mutually exclusive) — store into session_state
+st.session_state["selected_role"] = role_checkbox_group(key
+
 # ---------------- Sidebar: Queue ----------------
 # =========================
 # Sidebar (auto-expanding queue + generate + download)
