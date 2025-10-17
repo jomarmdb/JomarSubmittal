@@ -408,6 +408,15 @@ section[data-testid="stSidebar"] {
     background-color: #f9f9f9 !important; /* Light gray background */
     color: #000000 !important;
 }
+/* --- Buttons (all Streamlit buttons) --- */
+.stButton>button, .stDownloadButton>button {
+    background-color: #BC141B !important;
+    color: white !important;
+    border-radius: 8px !important;
+    border: none !important;
+    font-weight: 600 !important;
+    transition: 0.25s ease-in-out;
+}
 <style>
 """, unsafe_allow_html=True)
 # --- Layout for header + logo ---
