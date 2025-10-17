@@ -396,6 +396,26 @@ st.markdown("""
 }
 </style>
 """, unsafe_allow_html=True)
+st.markdown("""
+<style>
+/* Force sidebar arrow ligature spans to render using Material Icons */
+span[data-testid="stIconMaterial"],
+button[data-testid="stSidebarCollapseButton"] span,
+button[aria-label="menu"] span {
+  font-family: 'Material Icons', 'Helvetica', sans-serif !important;
+  font-feature-settings: 'liga';
+  -webkit-font-feature-settings: 'liga';
+  font-style: normal !important;
+  font-weight: normal !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  white-space: nowrap;
+  display: inline-block;
+  vertical-align: middle;
+  color: #BC141B !important;  /* Jomar red */
+}
+</style>
+""", unsafe_allow_html=True)
 # --- Layout for header + logo ---
 col1, col2 = st.columns([3, 1], vertical_alignment="center")
 
