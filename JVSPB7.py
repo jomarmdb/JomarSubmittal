@@ -519,42 +519,6 @@ div[data-baseweb="notification"] {
 }
 </style>
 """, unsafe_allow_html=True)
-st.markdown("""
-<style>
-/* --- Force gray theme for "Clear All Files" and "Add" buttons --- */
-div[data-testid="stButton"] > button {
-    all: unset !important;  /* reset Streamlit theme */
-    display: inline-block !important;
-    text-align: center !important;
-    cursor: pointer !important;
-    user-select: none !important;
-    padding: 0.5rem 1rem !important;
-    border-radius: 5px !important;
-    font-family: "Proxima Nova", sans-serif !important;
-    font-size: 0.9rem !important;
-    font-weight: 500 !important;
-    background-color: #f9f9f9 !important;
-    color: #000000 !important;
-    border: 1px solid #d3d3d3 !important;
-    transition: all 0.2s ease-in-out !important;
-    box-shadow: none !important;
-}
-
-/* Restore Streamlit hover / active feedback */
-div[data-testid="stButton"] > button:hover {
-    background-color: #e8e8e8 !important;
-    border-color: #c0c0c0 !important;
-}
-
-/* Specifically match "Clear All Files" and "Add" labels */
-div[data-testid="stButton"]:has(span:contains("Clear All Files")) > button,
-div[data-testid="stButton"]:has(span:contains("Add")) > button {
-    background-color: #f9f9f9 !important;
-    color: #000000 !important;
-    border: 1px solid #d3d3d3 !important;
-}
-</style>
-""", unsafe_allow_html=True)
 # --- Layout for header + logo ---
 col1, col2 = st.columns([3, 1], vertical_alignment="center")
 
@@ -598,7 +562,7 @@ st.session_state.setdefault("selected_subcategory", None)
 
 # ---------------- Cover Page Inputs (must be BEFORE the sidebar) ----------------
 st.markdown("---")
-st.subheader("COVER PAGE")
+st.subheader("Cover Page")
 
 # 1) Role (mutually exclusive) — store a string like "Contractor"/"Engineer"/...
 selected_role = role_checkbox_group(key_prefix="aud")
