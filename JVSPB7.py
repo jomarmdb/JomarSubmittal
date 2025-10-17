@@ -324,54 +324,41 @@ with st.sidebar:
     # --- Always rebuild display list ---
     display_rows = []
     for q in st.session_state.queue:
-        # Handle catalog-based selections (dicts)
         if isinstance(q, dict) and "Model" in q:
             display_rows.append(f"{q['Model']}")
-        # Handle uploaded or downloaded file objects
         elif hasattr(q, "name"):
-            clean_name = os.path.splitext(q.name)[0]  # remove .pdf extension
+            clean_name = os.path.splitext(q.name)[0]
             display_rows.append(f"{clean_name}")
-    
-    # Also include uploaded files separately (if any)
     for up in st.session_state.uploads:
         if hasattr(up, "name"):
             clean_name = os.path.splitext(up.name)[0]
-            display_rows.append(f"⋮{clean_name}")
+            display_rows.append(f"{clean_name}")
 
     if not display_rows:
         st.info("No items selected yet.")
     else:
         st.markdown("Click & Drag to Reorder")
-
-        # Unique key to force rerender when queue length changes
         list_key = f"queue_sort_{len(display_rows)}"
         sorted_items = sort_items(display_rows, direction="vertical", key=list_key)
 
-        # --- Rebuild only if the order changed ---
+        # --- Rebuild queue order ---
         new_queue, new_uploads = [], []
         for entry in sorted_items:
-            name = entry.replace("⋮⋮", "").strip()
-            if name.startswith("📄 "):
-                file_name = name.replace("📄 ", "")
-                match = next((f for f in st.session_state.uploads if getattr(f, "name", "") == file_name), None)
-                if match:
-                    new_uploads.append(match)
-            else:
-                model = name.strip()
-                match = next((q for q in st.session_state.queue if isinstance(q, dict) and q.get("Model") == model), None)
-                if match:
-                    new_queue.append(match)
-                else:
-                    # Also match against UploadedFile objects where .name == model.pdf
-                    match = next((f for f in st.session_state.queue if getattr(f, "name", "") == f"{model}.pdf"), None)
-                    if match:
-                        new_queue.append(match)
+            name = entry.strip()
+            match_q = next(
+                (q for q in st.session_state.queue
+                 if (isinstance(q, dict) and q.get("Model") == name)
+                 or (getattr(q, "name", "") == f"{name}.pdf")),
+                None
+            )
+            if match_q:
+                new_queue.append(match_q)
+            match_up = next((u for u in st.session_state.uploads if os.path.splitext(u.name)[0] == name), None)
+            if match_up:
+                new_uploads.append(match_up)
 
-        # ✅ Only update if the sorted order is different
-        if new_queue or new_uploads:
-            if new_queue != st.session_state.queue or new_uploads != st.session_state.uploads:
-                st.session_state.queue = new_queue
-                st.session_state.uploads = new_uploads
+        st.session_state.queue = new_queue
+        st.session_state.uploads = new_uploads
 
     st.markdown("---")
     if st.button("Clear All Files", use_container_width=True):
@@ -380,49 +367,50 @@ with st.sidebar:
         st.toast("All Files Cleared")
         st.rerun()
 
-# --- Create / Download Buttons (Sidebar only) ---
-if st.session_state.queue or st.session_state.uploads:
-    if st.button("Create Submittal Package", type="primary", use_container_width=True):
-        # ✅ Generate the PDF immediately here (no need to rerun first)
-        cover_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
-        make_cover_pdf(
-            cover_tmp.name,
-            logo_path=default_logo_path,
-            project_name=st.session_state.get("project_name", ""),
-            project_location=st.session_state.get("project_location", ""),
-            party_label=st.session_state.get("selected_role", ""),
-            party_name=st.session_state.get("party_name", ""),
-            date_prepared=st.session_state.get("date_prepared", datetime.now().date()),
-            bid_date=st.session_state.get("bid_date"),
-            bid_date_tbc=st.session_state.get("bid_date_tbc", False),
-            bid_date_na=st.session_state.get("bid_date_na", False),
-        )
+    # --- Create + Download inside sidebar ---
+    if st.session_state.queue or st.session_state.uploads:
+        create_btn = st.button("Create Submittal Package", type="primary", use_container_width=True)
+        if create_btn:
+            with st.spinner("Creating Submittal Package..."):
+                cover_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+                make_cover_pdf(
+                    cover_tmp.name,
+                    logo_path=default_logo_path,
+                    project_name=st.session_state.get("project_name", ""),
+                    project_location=st.session_state.get("project_location", ""),
+                    party_label=st.session_state.get("selected_role", ""),
+                    party_name=st.session_state.get("party_name", ""),
+                    date_prepared=st.session_state.get("date_prepared", datetime.now().date()),
+                    bid_date=st.session_state.get("bid_date"),
+                    bid_date_tbc=st.session_state.get("bid_date_tbc", False),
+                    bid_date_na=st.session_state.get("bid_date_na", False),
+                )
 
-        merger = PdfMerger()
-        merger.append(cover_tmp.name)
-        for f in st.session_state.queue:
-            try:
-                merger.append(f)
-            except Exception as e:
-                st.warning(f"Could not add {getattr(f, 'name', 'file')}: {e}")
+                merger = PdfMerger()
+                merger.append(cover_tmp.name)
+                for f in st.session_state.queue:
+                    try:
+                        merger.append(f)
+                    except Exception as e:
+                        st.warning(f"Could not add {getattr(f, 'name', 'file')}: {e}")
 
-        out_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
-        merger.write(out_tmp.name)
-        merger.close()
+                out_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+                merger.write(out_tmp.name)
+                merger.close()
 
-        with open(out_tmp.name, "rb") as f:
-            st.session_state["generated_pdf"] = f.read()
+                with open(out_tmp.name, "rb") as f:
+                    st.session_state["generated_pdf"] = f.read()
 
-        st.toast("✅ Submittal Package Created Successfully")
+                st.toast("✅ Submittal Package Created Successfully")
 
-    if "generated_pdf" in st.session_state:
-        st.download_button(
-            "Download Submittal Package",
-            data=st.session_state["generated_pdf"],
-            file_name="Jomar Valve Submittal Package.pdf",
-            mime="application/pdf",
-            use_container_width=True
-        )
+        if "generated_pdf" in st.session_state:
+            st.download_button(
+                "Download Submittal Package",
+                data=st.session_state["generated_pdf"],
+                file_name="Jomar Valve Submittal Package.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
 
 # ---------------- Uploader ----------------
 st.subheader("Upload Spec Sheets")
