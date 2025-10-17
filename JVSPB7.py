@@ -326,7 +326,7 @@ html, body, [class*="css"], .stMarkdown, .stButton button, .stTextInput input, .
 </style>
 """, unsafe_allow_html=True)
 st.header("JOMAR VALVE SUBMITTAL PACKAGE CREATOR")
-st.markdown("##### Upload PDFs and/or select from below catalog, reorder in the sidebar, and generate a combined PDF with a custom cover.")
+st.write("Upload PDFs and/or select from below catalog, reorder in the sidebar, and generate a combined PDF with a custom cover.")
 
 # Resolve app dir + default logo path (next to this file)
 APP_DIR = Path(__file__).parent
