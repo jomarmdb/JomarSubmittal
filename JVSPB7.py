@@ -670,17 +670,26 @@ with st.sidebar:
         if create_btn:
             with st.spinner("Creating Submittal Package..."):
                 cover_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+                project_name = st.session_state.get("project_name", "").strip()
+                project_location = st.session_state.get("project_location", "").strip()
+                party_name = st.session_state.get("party_name", "").strip()
+                selected_role = st.session_state.get("selected_role", "")
+                date_prepared = st.session_state.get("date_prepared")
+                bid_date = st.session_state.get("bid_date")
+                bid_date_tbc = st.session_state.get("bid_date_tbc", False)
+                bid_date_na = st.session_state.get("bid_date_na", False)
+                
                 make_cover_pdf(
                     cover_tmp.name,
                     logo_path=default_logo_path,
-                    project_name=st.session_state.get("project_name", ""),
-                    project_location=st.session_state.get("project_location", ""),
-                    party_label=st.session_state.get("selected_role", ""),   # e.g., "Contractor"
-                    party_name=st.session_state.get("party_name", ""),
-                    date_prepared=st.session_state.get("date_prepared"),     # a date object
-                    bid_date=st.session_state.get("bid_date"),               # a date or None
-                    bid_date_tbc=st.session_state.get("bid_date_tbc", False),
-                    bid_date_na=st.session_state.get("bid_date_na", False),
+                    project_name=project_name,
+                    project_location=project_location,
+                    party_label=selected_role,
+                    party_name=party_name,
+                    date_prepared=date_prepared,
+                    bid_date=bid_date,
+                    bid_date_tbc=bid_date_tbc,
+                    bid_date_na=bid_date_na,
                 )
                 merger = PdfMerger()
                 merger.append(cover_tmp.name)
