@@ -542,6 +542,33 @@ div[data-testid="stHorizontalBlock"] div.stButton > button:hover {
 }
 </style>
 """, unsafe_allow_html=True)
+st.markdown("""
+<style>
+/* 🎨 Light-gray theme for the "Clear All Files" sidebar button */
+section[data-testid="stSidebar"] div[data-testid="stButton"] > button:has(span:contains("Clear All Files")) {
+    all: unset !important;
+    display: block !important;
+    width: 100% !important;
+    text-align: center !important;
+    padding: 0.5rem 1rem !important;
+    background-color: #f9f9f9 !important;
+    color: #000000 !important;
+    border: 1px solid #d3d3d3 !important;
+    border-radius: 5px !important;
+    font-family: "Proxima Nova", sans-serif !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    box-shadow: none !important;
+    transition: all 0.2s ease-in-out !important;
+}
+
+/* Hover effect */
+section[data-testid="stSidebar"] div[data-testid="stButton"] > button:has(span:contains("Clear All Files")):hover {
+    background-color: #e8e8e8 !important;
+    border-color: #c0c0c0 !important;
+}
+</style>
+""", unsafe_allow_html=True)
 # --- Layout for header + logo ---
 col1, col2 = st.columns([3, 1], vertical_alignment="center")
 
