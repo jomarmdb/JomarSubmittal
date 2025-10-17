@@ -490,17 +490,17 @@ st.markdown("""
 /* --- Catalog product styling --- */
 .model-entry {
     font-family: 'Proxima Nova', sans-serif !important;
-    color: #000000 !important;          /* black text */
-    text-decoration: none !important;   /* remove underline */
-    line-height: 1.4em;
-    margin-bottom: 8px;
+    color: #000000 !important;
+    text-decoration: none !important;
+    line-height: 1.4em !important;
+    margin-bottom: 8px !important;
 }
 .model-entry strong {
     font-weight: 600;
     font-size: 1.05rem;
 }
 .model-entry .model-desc {
-    color: #444444 !important;          /* slightly lighter description */
+    color: #444444 !important;
     font-size: 0.9rem;
 }
 </style>
