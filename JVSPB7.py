@@ -355,33 +355,59 @@ if font_path.exists():
     }}
     </style>
     """, unsafe_allow_html=True)
-    st.markdown("""
-    <style>
-    [class^="material-icons"], [class*="material-icons"] {
-        font-family: 'Material Icons' !important;
-        font-weight: normal;
-        font-style: normal;
-        font-size: 24px;
-        display: inline-block;
-        line-height: 1;
-        text-transform: none;
-        letter-spacing: normal;
-        word-wrap: normal;
-        white-space: nowrap;
-        direction: ltr;
-    }
-    
-    /* 🎨 Customize sidebar expand/collapse arrow color to Jomar Red */
-    button[kind="icon"] svg {
-        fill: #BC141B !important;
-        color: #BC141B !important;
-    }
-    
-    button[kind="icon"]:hover svg {
-        filter: brightness(1.3);
-    }
-    </style>
-    """, unsafe_allow_html=True)
+# --- Ensure Google Material Icons load and are not overridden ---
+st.markdown("""
+<style>
+/* 1) Load Material Icons from Google (woff2 is small + fast) */
+@font-face {
+  font-family: 'Material Icons';
+  font-style: normal;
+  font-weight: 400;
+  src: url('https://fonts.gstatic.com/s/materialicons/v140/flUhRq6tzZclQEJ-Vdg-IuiaDsNc.woff2') format('woff2');
+  font-display: swap;
+}
+
+/* 2) Force icon spans to use the Material Icons font (even with Proxima overrides) */
+.material-icons,
+.material-icons-outlined,
+.material-icons-round,
+.material-icons-sharp,
+.material-icons-two-tone {
+  font-family: 'Material Icons' !important;
+  font-weight: normal !important;
+  font-style: normal !important;
+  font-size: 24px;          /* adjust if you want smaller/larger arrows */
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 3) Color the sidebar collapse/expand arrow to Jomar red in both old/new Streamlit UIs */
+
+/* Newer Streamlit (button renders an inline SVG) */
+[data-testid="stSidebarCollapseButton"] svg {
+  fill: #BC141B !important;
+  color: #BC141B !important;
+}
+[data-testid="stSidebarCollapseButton"]:hover svg {
+  filter: brightness(1.3);
+}
+
+/* Older Streamlit (button renders a ligature span) */
+button[kind="icon"] .material-icons,
+button[aria-label="menu"] .material-icons {
+  color: #BC141B !important;
+}
+button[kind="icon"]:hover .material-icons,
+button[aria-label="menu"]:hover .material-icons {
+  filter: brightness(1.3);
+}
+</style>
+""", unsafe_allow_html=True)
 
 # --- Layout for header + logo ---
 col1, col2 = st.columns([3, 1], vertical_alignment="center")
