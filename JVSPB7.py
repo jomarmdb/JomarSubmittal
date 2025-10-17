@@ -536,13 +536,6 @@ div[data-testid="stButton"] > button:has(span:contains("Add")) {
 }
 </style>
 """, unsafe_allow_html=True)
-/* Hover state */
-div[data-testid="stButton"] > button:has(span:contains("Add ")):hover {
-    background-color: #ffffff !important;
-    border-color: #e8e8e8 !important;
-}
-</style>
-""", unsafe_allow_html=True)
 # --- Layout for header + logo ---
 col1, col2 = st.columns([3, 1], vertical_alignment="center")
 
