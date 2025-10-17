@@ -364,7 +364,7 @@ st.session_state["selected_role"] = role_checkbox_group(key
 # Sidebar (auto-expanding queue + generate + download)
 # =========================
 with st.sidebar:
-    st.markdown("Selected Spec Sheets")
+st.markdown("Selected Spec Sheets")
 
     # --- Always rebuild display list ---
     display_rows = []
@@ -378,14 +378,14 @@ with st.sidebar:
         if hasattr(up, "name"):
             clean_name = os.path.splitext(up.name)[0]
             display_rows.append(f"{clean_name}")
-
+    
     if not display_rows:
         st.info("No items selected yet.")
     else:
         st.markdown("Click & Drag to Reorder")
         list_key = f"queue_sort_{len(display_rows)}"
         sorted_items = sort_items(display_rows, direction="vertical", key=list_key)
-
+    
         # --- Rebuild queue order ---
         new_queue, new_uploads = [], []
         for entry in sorted_items:
@@ -401,10 +401,10 @@ with st.sidebar:
             match_up = next((u for u in st.session_state.uploads if os.path.splitext(u.name)[0] == name), None)
             if match_up:
                 new_uploads.append(match_up)
-
+    
         st.session_state.queue = new_queue
         st.session_state.uploads = new_uploads
-
+    
     st.markdown("---")
     if st.button("Clear All Files", use_container_width=True):
         st.session_state.queue.clear()
