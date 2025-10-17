@@ -521,22 +521,25 @@ div[data-baseweb="notification"] {
 """, unsafe_allow_html=True)
 st.markdown("""
 <style>
-/* ---- Gray theme for catalog "Add" buttons only ---- */
+/* 🎨 Light-gray theme ONLY for the Clear All Files button (avoid other sidebar buttons) */
 
-/* Match Streamlit catalog section by proximity to the main area */
-div[data-testid="stHorizontalBlock"] div.stButton > button {
-    background-color: #f9f9f9 !important;   /* same light gray as info box */
-    color: #000000 !important;              /* black text */
-    border: 1px solid #d3d3d3 !important;   /* light gray border */
+/* Target by button label more reliably using the data-testid attribute for icon buttons and exact button span match */
+section[data-testid="stSidebar"] div[data-testid="stButton"] > button p:contains("Clear All Files"),
+section[data-testid="stSidebar"] div[data-testid="stButton"] > button span:contains("Clear All Files") {
+    background-color: #f9f9f9 !important;
+    color: #000000 !important;
+    border: 1px solid #d3d3d3 !important;
     border-radius: 5px !important;
-    font-weight: 500 !important;
     font-family: "Proxima Nova", sans-serif !important;
+    font-weight: 500 !important;
     box-shadow: none !important;
     transition: all 0.2s ease-in-out !important;
+    width: auto !important; /* keep normal width */
 }
 
-/* Hover effect */
-div[data-testid="stHorizontalBlock"] div.stButton > button:hover {
+/* Hover effect — light gray tint */
+section[data-testid="stSidebar"] div[data-testid="stButton"] > button p:contains("Clear All Files"):hover,
+section[data-testid="stSidebar"] div[data-testid="stButton"] > button span:contains("Clear All Files"):hover {
     background-color: #e8e8e8 !important;
     border-color: #c0c0c0 !important;
 }
