@@ -11,6 +11,7 @@ from datetime import datetime
 from pathlib import Path
 import tempfile, os
 from reportlab.pdfbase.ttfonts import TTFont
+import base64
 
 # --- Register Proxima Nova Font (or fallback to Helvetica) ---
 
@@ -313,18 +314,25 @@ def make_cover_pdf(
 # =====================================================
 st.set_page_config(page_title="Jomar Spec Sheet Combiner", layout="wide")
 
-# Apply Proxima Nova to Streamlit UI
-st.markdown("""
-<style>
-@font-face {
-    font-family: "Proxima Nova";
-    src: url("Proxima Nova Font.ttf") format("truetype");
-}
-html, body, [class*="css"], .stMarkdown, .stButton button, .stTextInput input, .stSelectbox select, .stDateInput input {
-    font-family: "Proxima Nova", sans-serif !important;
-}
-</style>
-""", unsafe_allow_html=True)
+# --- Embed Proxima Nova font into the Streamlit UI (silent fallback) ---
+font_path = Path(__file__).parent / "Proxima Nova Font.ttf"
+if font_path.exists():
+    with open(font_path, "rb") as f:
+        font_data = f.read()
+        font_base64 = base64.b64encode(font_data).decode()
+
+    st.markdown(f"""
+    <style>
+    @font-face {{
+        font-family: 'Proxima Nova';
+        src: url(data:font/ttf;base64,{font_base64}) format('truetype');
+    }}
+    html, body, [class*="css"], .stMarkdown, .stButton button,
+    .stTextInput input, .stSelectbox select, .stDateInput input {{
+        font-family: 'Proxima Nova', sans-serif !important;
+    }}
+    </style>
+    """, unsafe_allow_html=True)
 st.header("JOMAR VALVE SUBMITTAL PACKAGE CREATOR")
 st.write("Upload PDFs and/or select from below catalog, reorder in the sidebar, and generate a combined PDF with a custom cover.")
 
