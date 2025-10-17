@@ -417,16 +417,37 @@ section[data-testid="stSidebar"] {
     font-weight: 600 !important;
     transition: 0.25s ease-in-out;
 }
-/* --- Drag & Drop list items --- */
+/* --- Drag & Drop list items (Jomar Red theme) --- */
 div[data-testid="sortable-item"], 
-div[data-testid="sortable-container"] div {
-    background-color: #BC141B !important;
+div[data-testid="sortable-container"] > div {
+    background-color: #BC141B !important;   /* Jomar red base */
     border: 1px solid #BC141B !important;
     border-radius: 3px !important;
-    color: #BC141B !important;
+    color: white !important;                 /* white text for contrast */
     padding: 6px 10px !important;
     margin-bottom: 6px !important;
     transition: all 0.2s ease-in-out;
+}
+
+/* Hover / focused */
+div[data-testid="sortable-item"]:hover {
+    background-color: #a11218 !important;   /* slightly darker red */
+    transform: scale(1.02);
+}
+
+/* Actively being dragged */
+div[data-rbd-draggable-id],
+div[data-rbd-drag-handle-context-id],
+div[draggable="true"] {
+    background-color: #BC141B !important;
+    border: 2px dashed #7e0d12 !important;
+    color: white !important;
+}
+
+/* Drop placeholder styling */
+div[data-rbd-placeholder-context-id] {
+    background-color: #BC141B22 !important; /* faint red transparency */
+    border-radius: 3px !important;
 }
 <style>
 """, unsafe_allow_html=True)
