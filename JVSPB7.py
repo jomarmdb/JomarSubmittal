@@ -451,6 +451,41 @@ div[data-rbd-placeholder-context-id] {
 }
 <style>
 """, unsafe_allow_html=True)
+st.markdown("""
+<style>
+/* 🔧 Force override Streamlit accent colors for draggable items */
+:root {
+    --primary-color: #BC141B !important;         /* global accent (buttons, sliders, etc.) */
+    --secondary-background-color: #fafafa !important;
+    --text-color: #000000 !important;
+}
+
+/* Explicitly target sortable item containers and internal drag states */
+div[data-testid="sortable-item"],
+div[data-testid="sortable-container"] > div,
+div[draggable="true"],
+div[data-rbd-drag-handle-context-id],
+div[data-rbd-draggable-id] {
+    background-color: #BC141B !important;
+    border: 1px solid #BC141B !important;
+    color: white !important;
+    border-radius: 3px !important;
+    transition: all 0.2s ease-in-out;
+}
+
+/* On hover or active drag */
+div[data-testid="sortable-item"]:hover,
+div[draggable="true"]:hover {
+    background-color: #a11218 !important;
+}
+
+/* Drop placeholder */
+div[data-rbd-placeholder-context-id] {
+    background-color: #BC141B33 !important;
+    border-radius: 3px !important;
+}
+</style>
+""", unsafe_allow_html=True)
 # --- Layout for header + logo ---
 col1, col2 = st.columns([3, 1], vertical_alignment="center")
 
