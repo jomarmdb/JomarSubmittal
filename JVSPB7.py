@@ -610,46 +610,43 @@ with st.sidebar:
     st.markdown("Selected Spec Sheets")
 
 # ---- Build display list from QUEUE ONLY ----
-    def _item_label(obj):
-        # Catalog item (dict)
-        if isinstance(obj, dict) and "Model" in obj:
-            return str(obj["Model"]).strip()
-        # Uploaded/Downloaded file object
-        name = getattr(obj, "name", "")
-        return os.path.splitext(name)[0].strip() if name else ""
+def _item_label(obj):
+    # Catalog item (dict)
+    if isinstance(obj, dict) and "Model" in obj:
+        return str(obj["Model"]).strip()
+    # Uploaded/Downloaded file object
+    name = getattr(obj, "name", "")
+    return os.path.splitext(name)[0].strip() if name else ""
 
-    labels = [_item_label(x) for x in st.session_state.queue if _item_label(x)]
-    labels = [f"⋮⋮ {lbl}" for lbl in labels]  # add handle
+labels = [_item_label(x) for x in st.session_state.queue if _item_label(x)]
 
-    if not labels:
-        st.info("No items selected yet.")
-    else:
-        st.markdown("Click & Drag to Reorder")
+if not labels:
+    st.info("No items selected yet.")
+else:
+    st.markdown("Click & Drag to Reorder")
 
-        list_key = f"queue_sort_{len(labels)}"
-        sorted_items = sort_items(labels, direction="vertical", key=list_key)
-    
-# ---- Rebuild queue in the new order (no duplicates) ----
-        new_names = [s.replace("⋮⋮", "").strip() for s in sorted_items]
+    list_key = f"queue_sort_{len(labels)}"
+    sorted_items = sort_items(labels, direction="vertical", key=list_key)
 
-        # Make a consumable pool from the current queue so duplicates (if any) keep stability
-        pool = st.session_state.queue[:]
+    # ---- Rebuild queue in the new order (no duplicates) ----
+    new_names = [s.strip() for s in sorted_items]
 
-        def _match_and_pop(name, pool_list):
-            for i, obj in enumerate(pool_list):
-                if _item_label(obj) == name:
-                    return pool_list.pop(i)
-            return None
+    pool = st.session_state.queue[:]
 
-        new_queue = []
-        for nm in new_names:
-            matched = _match_and_pop(nm, pool)
-            if matched is not None:
-                new_queue.append(matched)
+    def _match_and_pop(name, pool_list):
+        for i, obj in enumerate(pool_list):
+            if _item_label(obj) == name:
+                return pool_list.pop(i)
+        return None
 
-        st.session_state.queue = new_queue
+    new_queue = []
+    for nm in new_names:
+        matched = _match_and_pop(nm, pool)
+        if matched is not None:
+            new_queue.append(matched)
 
-    
+    st.session_state.queue = new_queue
+
     st.markdown("---")
     if st.button("Clear All Files", use_container_width=True):
         st.session_state.queue.clear()
