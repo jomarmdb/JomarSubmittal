@@ -11,6 +11,13 @@ from datetime import datetime
 from pathlib import Path
 import tempfile, os
 
+# ---- Drag & Drop (Sortables) ----
+try:
+    from streamlit_sortables import sort_items
+except ImportError:
+    st.warning("⚠️ streamlit-sortables is not installed. Drag & drop ordering will be disabled.")
+    sort_items = lambda items, **kwargs: items  # fallback (just return items unchanged)
+
 # ---- Add this section to enable retries for downloads ----
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
