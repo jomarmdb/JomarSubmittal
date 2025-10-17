@@ -538,36 +538,3 @@ project_location = st.text_input("Project Location", "")
 date_prepared = st.date_input("Date Prepared", key="dp_date")
 bid_date, bid_date_tbc, bid_date_na = bid_date_picker_with_flags("Bid Date", key="bd")
 
-# ---------------- Generate Combined PDF ----------------
-if st.session_state.queue and st.button("Create Submittal Package", type="primary"):
-    cover_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
-    make_cover_pdf(
-        cover_tmp.name,
-        logo_path=default_logo_path,
-        project_name=project_name,
-        project_location=project_location,
-        party_label=selected_role,   # role (may be None)
-        party_name=party_name,       # company/name text
-        date_prepared=date_prepared,
-        bid_date=bid_date,
-        bid_date_tbc=bid_date_tbc,
-        bid_date_na=bid_date_na,
-    )
-
-    merger = PdfMerger()
-    merger.append(cover_tmp.name)
-    for f in st.session_state.queue:
-        try:
-            merger.append(f)  # UploadedFile or BytesIO; both work
-        except Exception as e:
-            st.warning(f"Could not add {getattr(f, 'name', 'file')}: {e}")
-
-    out_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
-    merger.write(out_tmp.name)
-    merger.close()
-
-    # ✅ Save PDF bytes to session state for sidebar download
-    with open(out_tmp.name, "rb") as f:
-        pdf_bytes = f.read()
-        st.session_state["generated_pdf"] = pdf_bytes
-    
