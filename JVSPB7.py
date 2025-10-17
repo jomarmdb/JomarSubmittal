@@ -618,7 +618,7 @@ with cols[1]:
     st.session_state.selected_subcategory = subcategory
 
 filtered = library[(library["Category"] == category) & (library["Subcategory"] == subcategory)]
-st.markdown("### Products")
+st.markdown("### PRODUCTS")
 
 if filtered.empty:
     st.info("No products found for this selection.")
