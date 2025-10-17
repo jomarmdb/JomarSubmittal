@@ -346,8 +346,11 @@ with st.sidebar:
                 match = next((q for q in st.session_state.queue if q["Model"] == model), None)
                 if match:
                     new_queue.append(match)
+
+        # ✅ Moved OUTSIDE the for-loop (this fixes your “only one item shows” bug)
         st.session_state.queue = new_queue
         st.session_state.uploads = new_uploads
+        st.toast("✅ Order updated")
 
     st.markdown("---")
     if st.button("Clear All Files", use_container_width=True):
