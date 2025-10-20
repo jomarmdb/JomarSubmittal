@@ -859,10 +859,11 @@ else:
                         st.session_state.queue.append(fobj)
                         st.toast(f"✓ Added {model} to queue", icon="✅")
                         st.rerun()
+                    except requests.exceptions.ConnectTimeout:
+                        st.warning(f"⚠️ Connection to {url} timed out: Please try again later.")
+                    except requests.exceptions.ReadTimeout:
+                        st.warning(f"⚠️ Download from {url} took too long: Please try again later.")
+                    except requests.exceptions.RequestException as e:
+                        st.warning(f"⚠️ Network error while fetching {model}: {e}")
                     except Exception as e:
-                        except requests.exceptions.ConnectTimeout:
-                            st.warning(f"⚠️ Connection to {url} timed out: Please try again later.")
-                        except requests.exceptions.ReadTimeout:
-                            st.warning(f"⚠️ Download from {url} timed out: Please try again later.")
-                        except Exception as e:
-                            st.warning(f"Could not add {model}: {e}")
+                        st.warning(f"Could not add {model}: {e}")
