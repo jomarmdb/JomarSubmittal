@@ -802,7 +802,7 @@ with st.sidebar:
                 file_name="Jomar Valve Submittal Package.pdf",
                 mime="application/pdf",
                 use_container_width=True)
-        )
+                )
 # ---------------- Uploader ----------------
 st.subheader("UPLOAD FILES")
 uploaded_files = st.file_uploader(
