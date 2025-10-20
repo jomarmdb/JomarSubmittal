@@ -572,40 +572,6 @@ div[data-testid="stHorizontalBlock"] div.stButton > button:hover {
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("""
-<style>
-/* ---- Sidebar Layout ---- */
-[data-testid="stSidebar"] > div:first-child {
-    display: flex;
-    flex-direction: column;
-    height: 100vh; /* full sidebar height */
-}
-
-/* Make the queue area scroll independently */
-.queue-scroll {
-    flex: 1 1 auto;
-    max-height: 50vh; /* adjust as needed */
-    overflow-y: auto;
-    padding-right: 6px;
-}
-
-/* Keep action buttons pinned to bottom */
-.sidebar-bottom {
-    margin-top: auto;
-    padding-top: 12px;
-    border-top: 1px solid #ddd;
-}
-
-/* Optional: minimal scrollbar */
-.queue-scroll::-webkit-scrollbar { width: 6px; }
-.queue-scroll::-webkit-scrollbar-thumb {
-    background-color: #bbb;
-    border-radius: 3px;
-}
-</style>
-""", unsafe_allow_html=True)
-
-
 # --- Layout for header + logo ---
 col1, col2 = st.columns([3, 1], vertical_alignment="center")
 
@@ -687,7 +653,7 @@ st.session_state["bid_date_na"] = bd_na
 
 # ---------------- Sidebar: Queue ----------------
 with st.sidebar:
-    st.markdown("### Selected Spec Sheets")
+    st.markdown("Selected Spec Sheets")
 
     # ---- Build display list from QUEUE ONLY ----
     def _item_label(obj):
@@ -699,10 +665,7 @@ with st.sidebar:
         return os.path.splitext(name)[0].strip() if name else ""
 
     labels = [_item_label(x) for x in st.session_state.queue if _item_label(x)]
-    labels = [f"{lbl}" for lbl in labels]
-
-    # --- Scrollable drag/drop container starts here ---
-    st.markdown('<div class="queue-scroll">', unsafe_allow_html=True)
+    labels = [f"{lbl}" for lbl in labels]  # add handle
 
     if not labels:
         st.info("No items selected yet.")
@@ -713,7 +676,9 @@ with st.sidebar:
         sorted_items = sort_items(labels, direction="vertical", key=list_key)
 
         # ---- Rebuild queue in the new order (no duplicates) ----
-        new_names = [s.strip() for s in sorted_items]
+        new_names = [s.replace("", "").strip() for s in sorted_items]
+
+        # Make a consumable pool from the current queue so duplicates (if any) keep stability
         pool = st.session_state.queue[:]
 
         def _match_and_pop(name, pool_list):
@@ -728,27 +693,32 @@ with st.sidebar:
             if matched is not None:
                 new_queue.append(matched)
 
-        # Deduplicate any leftovers safely
         unique_seen = set()
         deduped_queue = []
-        for f in new_queue:
+        for f in st.session_state.queue:
             name = getattr(f, "name", "")
             if name not in unique_seen:
                 deduped_queue.append(f)
                 unique_seen.add(name)
-
         st.session_state.queue = deduped_queue
 
-    # --- Close scroll container after queue display ---
-    st.markdown('</div>', unsafe_allow_html=True)
+        st.session_state.queue = new_queue
 
-    # --- Below remains non-scrollable (fixed position area) ---
+
     st.markdown("---")
     if st.button("Clear All Files", use_container_width=True):
         st.session_state.queue.clear()
         st.session_state.uploads.clear()
         st.toast("All Files Cleared")
         st.rerun()
+
+    # --- Spacer to push create/download to bottom ---
+    st.markdown(
+        """
+        <div style="flex-grow:1; height:320px;"></div>
+        """,
+        unsafe_allow_html=True
+    )
 
     # --- Create + Download buttons at bottom ---
     st.markdown("---")
@@ -801,7 +771,7 @@ with st.sidebar:
                 data=st.session_state["generated_pdf"],
                 file_name="Jomar Valve Submittal Package.pdf",
                 mime="application/pdf",
-                use_container_width=True)
+                use_container_width=True
             )
 # ---------------- Uploader ----------------
 st.subheader("UPLOAD FILES")
