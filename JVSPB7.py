@@ -572,6 +572,36 @@ div[data-testid="stHorizontalBlock"] div.stButton > button:hover {
 </style>
 """, unsafe_allow_html=True)
 
+st.markdown("""
+<style>
+/* --- Make the queue list scroll independently --- */
+.queue-scroll {
+    max-height: 300px;       /* adjust as needed */
+    overflow-y: auto;
+    padding-right: 4px;      /* prevent scrollbar overlap */
+}
+
+/* --- Keep the bottom action buttons fixed --- */
+[data-testid="stSidebar"] > div:first-child {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;            /* use full sidebar height */
+}
+[data-testid="stSidebar"] > div:first-child > div:last-child {
+    margin-top: auto;         /* push last section (buttons) to bottom */
+}
+
+/* --- Optional: hide scrollbar styling for a cleaner look --- */
+.queue-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+.queue-scroll::-webkit-scrollbar-thumb {
+    background-color: #ccc;
+    border-radius: 3px;
+}
+</style>
+""", unsafe_allow_html=True)
+
 # --- Layout for header + logo ---
 col1, col2 = st.columns([3, 1], vertical_alignment="center")
 
@@ -667,6 +697,8 @@ with st.sidebar:
     labels = [_item_label(x) for x in st.session_state.queue if _item_label(x)]
     labels = [f"{lbl}" for lbl in labels]  # add handle
 
+    st.markdown('<div class="queue-scroll">', unsafe_allow_html=True)
+    
     if not labels:
         st.info("No items selected yet.")
     else:
@@ -674,6 +706,8 @@ with st.sidebar:
 
         list_key = f"queue_sort_{len(labels)}"
         sorted_items = sort_items(labels, direction="vertical", key=list_key)
+
+    st.markdown('</div>', unsafe_allow_html=True)
 
         # ---- Rebuild queue in the new order (no duplicates) ----
         new_names = [s.replace("", "").strip() for s in sorted_items]
