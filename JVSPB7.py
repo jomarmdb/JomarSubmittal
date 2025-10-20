@@ -736,6 +736,7 @@ with st.sidebar:
             )
 # ---------------- Uploader ----------------
 st.subheader("UPLOAD FILES")
+
 uploaded_files = st.file_uploader(
     "Add PDF spec sheets (these will appear in the sidebar queue):",
     type="pdf",
@@ -753,8 +754,10 @@ if uploaded_files:
             st.session_state.uploads.append(f)
             existing.add(key)
             new_count += 1
-    if new_count:
+
+    if new_count > 0:
         st.success(f"✓ Added {new_count} uploaded file(s) to queue.")
+        st.rerun()  # 🔁 Force immediate UI refresh so files appear in sidebar
 
 # ---------------- Catalog View ----------------
 st.markdown("---")
