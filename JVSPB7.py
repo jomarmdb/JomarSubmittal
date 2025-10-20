@@ -663,6 +663,15 @@ with st.sidebar:
             if matched is not None:
                 new_queue.append(matched)
 
+        unique_seen = set()
+        deduped_queue = []
+        for f in st.session_state.queue:
+            name = getattr(f, "name", "")
+            if name not in unique_seen:
+                deduped_queue.append(f)
+                unique_seen.add(name)
+        st.session_state.queue = deduped_queue
+
         st.session_state.queue = new_queue
 
 
@@ -762,7 +771,7 @@ st.subheader("SPEC SHEET LIBRARY")
 
 EXCEL_PATH = "spec_links_images.xlsx"
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, ttl=600)
 def load_library(xlsx_path):
     df = pd.read_excel(xlsx_path)
     expected = {"Category","Subcategory","Model","Description","URL","Image"}
@@ -770,6 +779,13 @@ def load_library(xlsx_path):
     if missing:
         raise ValueError(f"Missing columns in Excel: {missing}")
     return df.dropna(subset=["Model","URL"]).copy()
+
+@st.cache_data(show_spinner=False)
+def fetch_pdf_cached(url: str):
+    session = create_session_with_retries(retries=4, backoff_factor=1.5)
+    resp = session.get(url, timeout=25)
+    resp.raise_for_status()
+    return resp.content
 
 try:
     library = load_library(EXCEL_PATH)
@@ -833,13 +849,15 @@ else:
                 if target_name in queue_names:
                     st.toast(f"{model} is already in the queue.", icon="⚠️")
                 else:
+                    session = create_session_with_retries(retries=4, backoff_factor=1.5)
                     try:
-                        resp = requests.get(url, timeout=60)
+                        resp = requests.get(url, timeout=25)
                         resp.raise_for_status()
+                        pdf_bytes = fetch_pdf_cached(url)
                         fobj = BytesIO(resp.content)
                         fobj.name = target_name
                         st.session_state.queue.append(fobj)
                         st.toast(f"✓ Added {model} to queue", icon="✅")
-                        st.rerun()   # <— this line forces sidebar to refresh
+                        st.rerun()
                     except Exception as e:
                         st.warning(f"Could not add {model}: {e}")
