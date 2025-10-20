@@ -707,7 +707,7 @@ with st.sidebar:
         list_key = f"queue_sort_{len(labels)}"
         sorted_items = sort_items(labels, direction="vertical", key=list_key)
 
-    st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
         # ---- Rebuild queue in the new order (no duplicates) ----
         new_names = [s.replace("", "").strip() for s in sorted_items]
