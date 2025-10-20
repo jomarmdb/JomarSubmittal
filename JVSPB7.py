@@ -57,16 +57,31 @@ def create_session_with_retries(retries=3, backoff_factor=2):
     return session
 
 # --- Cached PDF download (improves stability and speed) ---
-@st.cache_data(show_spinner=False, persist="disk")
-def fetch_pdf_cached(url: str) -> bytes | None:
-    """Download and cache a PDF from the given URL. Returns raw bytes or None."""
-    session = create_session_with_retries(retries=5, backoff_factor=1.5)
-    try:
-        resp = session.get(url, timeout=(10, 45))
-        resp.raise_for_status()
-        return resp.content
-    except requests.exceptions.RequestException:
-        return None
+def fetch_pdf_cached(url: str):
+    """
+    Returns the PDF bytes for a given URL.
+    Saves a copy to disk (CACHE_DIR) so the same file can be reused after code updates.
+    """
+    # Generate a safe filename from the URL
+    import hashlib
+    filename = hashlib.md5(url.encode()).hexdigest() + ".pdf"
+    file_path = CACHE_DIR / filename
+
+    # If already cached on disk, reuse it
+    if file_path.exists():
+        with open(file_path, "rb") as f:
+            return f.read()
+
+    # Otherwise, download it and store locally
+    session = create_session_with_retries(retries=4, backoff_factor=1.5)
+    resp = session.get(url, timeout=25)
+    resp.raise_for_status()
+
+    pdf_bytes = resp.content
+    with open(file_path, "wb") as f:
+        f.write(pdf_bytes)
+
+    return pdf_bytes
 
 # =====================================================
 # Drag & drop ordering (with fallback if package missing)
