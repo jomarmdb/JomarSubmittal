@@ -53,6 +53,18 @@ def create_session_with_retries(retries=3, backoff_factor=2):
     session.mount("http://", adapter)
     return session
 
+# --- Cached PDF download (improves stability and speed) ---
+@st.cache_data(show_spinner=False, persist="disk")
+def fetch_pdf_cached(url: str) -> bytes | None:
+    """Download and cache a PDF from the given URL. Returns raw bytes or None."""
+    session = create_session_with_retries(retries=5, backoff_factor=1.5)
+    try:
+        resp = session.get(url, timeout=(10, 45))
+        resp.raise_for_status()
+        return resp.content
+    except requests.exceptions.RequestException:
+        return None
+
 # =====================================================
 # Drag & drop ordering (with fallback if package missing)
 # =====================================================
@@ -781,7 +793,7 @@ def load_library(xlsx_path):
     return df.dropna(subset=["Model","URL"]).copy()
 
 @st.cache_data(show_spinner=False)
-def fetch_pdf_cached(url: str):
+def fetch_pdf_cached(url: str) -> bytes | None:
     session = create_session_with_retries(retries=5, backoff_factor=1.5)
     resp = session.get(url, timeout=(10, 45))
     resp.raise_for_status()
@@ -849,16 +861,17 @@ else:
                 if target_name in queue_names:
                     st.toast(f"{model} is already in the queue.", icon="⚠️")
                 else:
-                    session = create_session_with_retries(retries=4, backoff_factor=1.5)
                     try:
-                        resp = requests.get(url, timeout=25)
-                        resp.raise_for_status()
+                        # Download using cache (with retries automatically inside)
                         pdf_bytes = fetch_pdf_cached(url)
-                        fobj = BytesIO(resp.content)
-                        fobj.name = target_name
-                        st.session_state.queue.append(fobj)
-                        st.toast(f"✓ Added {model} to queue", icon="✅")
-                        st.rerun()
+                        if pdf_bytes:
+                            fobj = BytesIO(pdf_bytes)
+                            fobj.name = target_name
+                            st.session_state.queue.append(fobj)
+                            st.toast(f"✓ Added {model} to queue", icon="✅")
+                            st.rerun()
+                        else:
+                            st.warning(f"⚠️ Could not fetch {model} — the link may be offline or too slow.")
                     except requests.exceptions.ConnectTimeout:
                         st.warning(f"⚠️ Connection to {url} timed out: Please try again later.")
                     except requests.exceptions.ReadTimeout:
@@ -867,3 +880,4 @@ else:
                         st.warning(f"⚠️ Network error while fetching {model}: {e}")
                     except Exception as e:
                         st.warning(f"Could not add {model}: {e}")
+
