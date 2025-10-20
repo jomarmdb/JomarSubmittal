@@ -14,6 +14,9 @@ from reportlab.pdfbase.ttfonts import TTFont
 import base64
 from PIL import Image
 
+CACHE_DIR = Path(__file__).parent / "pdf_cache"
+CACHE_DIR.mkdir(exist_ok=True)
+
 # --- Register Proxima Nova Font (or fallback to Helvetica) ---
 
 FONT_PATH = Path(__file__).parent / "Proxima Nova Font.ttf"
