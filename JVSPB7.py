@@ -782,8 +782,8 @@ def load_library(xlsx_path):
 
 @st.cache_data(show_spinner=False)
 def fetch_pdf_cached(url: str):
-    session = create_session_with_retries(retries=4, backoff_factor=1.5)
-    resp = session.get(url, timeout=25)
+    session = create_session_with_retries(retries=5, backoff_factor=1.5)
+    resp = session.get(url, timeout=(10, 45))
     resp.raise_for_status()
     return resp.content
 
@@ -860,4 +860,9 @@ else:
                         st.toast(f"✓ Added {model} to queue", icon="✅")
                         st.rerun()
                     except Exception as e:
-                        st.warning(f"Could not add {model}: {e}")
+                        except requests.exceptions.ConnectTimeout:
+                            st.warning(f"⚠️ Connection to {url} timed out: Please try again later.")
+                        except requests.exceptions.ReadTimeout:
+                            st.warning(f"⚠️ Download from {url} timed out: Please try again later.")
+                        except Exception as e:
+                            st.warning(f"Could not add {model}: {e}")
