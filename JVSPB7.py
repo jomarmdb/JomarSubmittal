@@ -775,16 +775,17 @@ with st.sidebar:
             )
 # ---------------- Uploader ----------------
 st.subheader("UPLOAD FILES")
+
 uploaded_files = st.file_uploader(
-    "Add PDF spec sheets (these will appear in the sidebar queue):",
+    "Add PDF Files to appear in the submittal package):",
     type="pdf",
     accept_multiple_files=True
 )
 
 if uploaded_files:
-    # Avoid duplicates by (name, size)
     existing = {(getattr(f, "name", ""), getattr(f, "size", None)) for f in st.session_state.queue}
     new_count = 0
+    
     for f in uploaded_files:
         key = (f.name, getattr(f, "size", None))
         if key not in existing:
@@ -792,8 +793,10 @@ if uploaded_files:
             st.session_state.uploads.append(f)
             existing.add(key)
             new_count += 1
+            
     if new_count:
         st.success(f"✓ Added {new_count} uploaded file(s) to queue.")
+        st.rerun()
 
 # ---------------- Catalog View ----------------
 st.markdown("---")
