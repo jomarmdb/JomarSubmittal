@@ -14,6 +14,98 @@ from reportlab.pdfbase.ttfonts import TTFont
 import base64
 from PIL import Image
 
+# --- Google Drive client (Service Account) ---
+import json
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+import streamlit as st
+
+SCOPES = ["https://www.googleapis.com/auth/drive"]
+DRIVE_FOLDER_ID = st.secrets["drive"]["folder_id"]
+
+def get_drive_service():
+    # Option A: from Streamlit secrets (recommended on Streamlit Cloud)
+    info = st.secrets["gcp_service_account"]
+    credentials = service_account.Credentials.from_service_account_info(
+        info, scopes=SCOPES
+    )
+    return build("drive", "v3", credentials=credentials)
+
+# --- Helper function: Upload PDF to Google Drive ---
+from googleapiclient.http import MediaIoBaseUpload
+
+def upload_to_drive(file_obj, filename):
+    """Upload or update a file in your Drive folder and return its shareable link."""
+    try:
+        drive = get_drive_service()  # reuse the connection from above
+
+        # Check if a file with the same name already exists in the target folder
+        search = drive.files().list(
+            q=f"name='{filename}' and '{st.secrets['drive']['folder_id']}' in parents and trashed=false",
+            fields="files(id)"
+        ).execute()
+        files = search.get("files", [])
+
+        media_body = MediaIoBaseUpload(file_obj, mimetype="application/pdf", resumable=True)
+
+        if files:
+            # Update the existing file
+            file_id = files[0]["id"]
+            drive.files().update(fileId=file_id, media_body=media_body).execute()
+        else:
+            # Upload new file
+            metadata = {"name": filename, "parents": [st.secrets["drive"]["folder_id"]]}
+            created = drive.files().create(body=metadata, media_body=media_body, fields="id").execute()
+            file_id = created.get("id")
+
+        # Make file viewable to anyone with the link
+        drive.permissions().create(
+            fileId=file_id,
+            body={"role": "reader", "type": "anyone"},
+        ).execute()
+
+        # Generate shareable download link
+        link = f"https://drive.google.com/uc?id={file_id}&export=download"
+        return link
+
+    except Exception as e:
+        st.error(f"Drive upload failed: {e}")
+        return None
+
+
+    # Option B (local dev): from a JSON key file
+    # credentials = service_account.Credentials.from_service_account_file(
+    #     "path/to/your-service-account.json", scopes=SCOPES
+    # )
+    # return build("drive", "v3", credentials=credentials)
+
+# Quick sanity check button
+if st.button("Test Google Drive connection"):
+    try:
+        drive = get_drive_service()
+        # list a few files in the target folder
+        results = drive.files().list(
+            q=f"'{DRIVE_FOLDER_ID}' in parents and trashed=false",
+            pageSize=5,
+            fields="files(id, name)"
+        ).execute()
+        files = results.get("files", [])
+        if not files:
+            st.success("Connected! Folder is empty (no files yet).")
+        else:
+            st.success("Connected! Found files:")
+            for f in files:
+                st.write(f"- {f['name']} ({f['id']})")
+    except Exception as e:
+        st.error(f"Drive connection failed: {e}")
+
+# Test upload
+test_file = st.file_uploader("Upload a test PDF to Drive", type="pdf")
+if test_file and st.button("Upload to Drive"):
+    link = upload_to_drive(test_file, test_file.name)
+    if link:
+        st.success(f"✅ Uploaded! [Download here]({link})")
+
 # --- Register Proxima Nova Font (or fallback to Helvetica) ---
 
 FONT_PATH = Path(__file__).parent / "Proxima Nova Font.ttf"
