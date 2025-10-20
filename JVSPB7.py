@@ -746,14 +746,6 @@ with st.sidebar:
         st.toast("All Files Cleared")
         st.rerun()
 
-    # --- Spacer to push create/download to bottom ---
-    st.markdown(
-        """
-        <div style="flex-grow:1; height:320px;"></div>
-        """,
-        unsafe_allow_html=True
-    )
-
     # --- Create + Download buttons at bottom ---
     st.markdown("---")
     if st.session_state.queue or st.session_state.uploads:
