@@ -14,6 +14,49 @@ from reportlab.pdfbase.ttfonts import TTFont
 import base64
 from PIL import Image
 
+# --- Google Drive client (Service Account) ---
+import json
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+import streamlit as st
+
+SCOPES = ["https://www.googleapis.com/auth/drive"]
+DRIVE_FOLDER_ID = st.secrets["drive"]["folder_id"]
+
+def get_drive_service():
+    # Option A: from Streamlit secrets (recommended on Streamlit Cloud)
+    info = st.secrets["gcp_service_account"]
+    credentials = service_account.Credentials.from_service_account_info(
+        info, scopes=SCOPES
+    )
+    return build("drive", "v3", credentials=credentials)
+
+    # Option B (local dev): from a JSON key file
+    # credentials = service_account.Credentials.from_service_account_file(
+    #     "path/to/your-service-account.json", scopes=SCOPES
+    # )
+    # return build("drive", "v3", credentials=credentials)
+
+# Quick sanity check button
+if st.button("Test Google Drive connection"):
+    try:
+        drive = get_drive_service()
+        # list a few files in the target folder
+        results = drive.files().list(
+            q=f"'{DRIVE_FOLDER_ID}' in parents and trashed=false",
+            pageSize=5,
+            fields="files(id, name)"
+        ).execute()
+        files = results.get("files", [])
+        if not files:
+            st.success("Connected! Folder is empty (no files yet).")
+        else:
+            st.success("Connected! Found files:")
+            for f in files:
+                st.write(f"- {f['name']} ({f['id']})")
+    except Exception as e:
+        st.error(f"Drive connection failed: {e}")
+
 # --- Register Proxima Nova Font (or fallback to Helvetica) ---
 
 FONT_PATH = Path(__file__).parent / "Proxima Nova Font.ttf"
