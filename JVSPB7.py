@@ -751,7 +751,6 @@ with st.sidebar:
         st.rerun()
 
     # --- Create + Download buttons at bottom ---
-    st.markdown('<div class="sidebar-bottom">', unsafe_allow_html=True)
     st.markdown("---")
     if st.session_state.queue or st.session_state.uploads:
         create_btn = st.button("Create Submittal Package", type="primary", use_container_width=True)
@@ -802,8 +801,7 @@ with st.sidebar:
                 data=st.session_state["generated_pdf"],
                 file_name="Jomar Valve Submittal Package.pdf",
                 mime="application/pdf",
-                use_container_width=True
-        st.markdown('</div>', unsafe_allow_html=True)
+                use_container_width=True)
             )
 # ---------------- Uploader ----------------
 st.subheader("UPLOAD FILES")
