@@ -804,21 +804,24 @@ st.subheader("SPEC SHEET LIBRARY")
 
 EXCEL_PATH = "spec_links_images.xlsx"
 
-# --- Cached Excel loader that automatically refreshes if the file changes ---
-@st.cache_data(show_spinner=False)
-def load_library(xlsx_path, modified_time=None):
-    """Load and cache the Excel library. Cache invalidates when file is updated."""
+@st.cache_data(show_spinner=False, ttl=600)
+def load_library(xlsx_path):
     df = pd.read_excel(xlsx_path)
-    expected = {"Category", "Subcategory", "Model", "Description", "URL", "Image"}
+    expected = {"Category","Subcategory","Model","Description","URL","Image"}
     missing = [c for c in expected if c not in df.columns]
     if missing:
         raise ValueError(f"Missing columns in Excel: {missing}")
-    return df.dropna(subset=["Model", "URL"]).copy()
+    return df.dropna(subset=["Model","URL"]).copy()
 
-# 👇 This part makes the cache refresh automatically when the file is replaced or updated
+@st.cache_data(show_spinner=False)
+def fetch_pdf_cached(url: str) -> bytes | None:
+    session = create_session_with_retries(retries=5, backoff_factor=1.5)
+    resp = session.get(url, timeout=(10, 45))
+    resp.raise_for_status()
+    return resp.content
+
 try:
-    file_mtime = os.path.getmtime(EXCEL_PATH)  # timestamp of the file
-    library = load_library(EXCEL_PATH, file_mtime)
+    library = load_library(EXCEL_PATH)
 except Exception as e:
     st.error(f"Unable to load Excel: {e}")
     st.stop()
