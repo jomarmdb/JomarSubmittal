@@ -343,7 +343,7 @@ def make_cover_pdf(
 # =====================================================
 # App UI
 # =====================================================
-st.set_page_config(page_title="Jomar Spec Sheet Combiner", layout="wide")
+st.set_page_config(page_title="Jomar Valve Submittal Package Creator", layout="wide")
 
 # --- Embed Proxima Nova font into the Streamlit UI (full coverage + silent fallback) ---
 font_path = Path(__file__).parent / "Proxima Nova Font.ttf"
