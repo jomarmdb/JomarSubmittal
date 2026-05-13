@@ -14,15 +14,14 @@ from reportlab.pdfbase.ttfonts import TTFont
 import base64
 from PIL import Image
 
-# --- Initial Setup ---
 CACHE_DIR = Path(__file__).parent / "pdf_cache"
 CACHE_DIR.mkdir(exist_ok=True)
-APP_DIR = Path(__file__).parent
-LOGO_FILENAME = "Jomar Valve Logo Red.png"
-default_logo_path = str(APP_DIR / LOGO_FILENAME)
 
-# --- Font Registration ---
+# --- Register Proxima Nova Font (or fallback to Helvetica) ---
+
 FONT_PATH = Path(__file__).parent / "Proxima Nova Font.ttf"
+
+# Try to load Proxima Nova font quietly (no UI messages)
 if FONT_PATH.exists():
     try:
         pdfmetrics.registerFont(TTFont("ProximaNova", str(FONT_PATH)))
@@ -32,232 +31,874 @@ if FONT_PATH.exists():
 else:
     FONT_TITLE = FONT_TEXT = "Helvetica"
 
-# --- Drag & Drop Fallback ---
+# ---- Drag & Drop (Sortables) ----
 try:
     from streamlit_sortables import sort_items
 except ImportError:
-    sort_items = lambda items, **kwargs: items 
+    st.warning("⚠️ streamlit-sortables is not installed. Drag & drop ordering will be disabled.")
+    sort_items = lambda items, **kwargs: items  # fallback (just return items unchanged)
 
-# --- Networking Helpers ---
+# ---- Add this section to enable retries for downloads ----
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
 def create_session_with_retries(retries=3, backoff_factor=2):
     session = requests.Session()
-    retry = Retry(total=retries, read=retries, connect=retries, backoff_factor=backoff_factor, status_forcelist=[500, 502, 503, 504])
+    retry = Retry(
+        total=retries,
+        read=retries,
+        connect=retries,
+        backoff_factor=backoff_factor,
+        status_forcelist=[500, 502, 503, 504],
+    )
     adapter = HTTPAdapter(max_retries=retry)
-    session.mount("https://", adapter); session.mount("http://", adapter)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
     return session
 
+# --- Cached PDF download (improves stability and speed) ---
 def fetch_pdf_cached(url: str):
+    """
+    Returns the PDF bytes for a given URL.
+    Saves a copy to disk (CACHE_DIR) so the same file can be reused after code updates.
+    """
+    # Generate a safe filename from the URL
     import hashlib
     filename = hashlib.md5(url.encode()).hexdigest() + ".pdf"
     file_path = CACHE_DIR / filename
+
+    # If already cached on disk, reuse it
     if file_path.exists():
-        with open(file_path, "rb") as f: return f.read()
+        with open(file_path, "rb") as f:
+            return f.read()
+
+    # Otherwise, download it and store locally
     session = create_session_with_retries(retries=4, backoff_factor=1.5)
     resp = session.get(url, timeout=25)
     resp.raise_for_status()
+
     pdf_bytes = resp.content
-    with open(file_path, "wb") as f: f.write(pdf_bytes)
+    with open(file_path, "wb") as f:
+        f.write(pdf_bytes)
+
     return pdf_bytes
 
-# --- Cover Page Helpers ---
+# =====================================================
+# Drag & drop ordering (with fallback if package missing)
+# =====================================================
+def _get_sort_labels_fn():
+    try:
+        from streamlit_sortables import sort_items
+        def sort_labels(labels, key="file_order"):
+            st.markdown("**Click & Drag to set the order of spec sheets (Cover page stays first):**")
+            return sort_items(labels, direction="vertical", multi_containers=False, key=key)
+        return sort_labels
+    except Exception:
+        pass
+
+    # Fallback: numeric ordering inputs
+    def sort_labels(labels, key="file_order"):
+        st.info("Drag component not available. Enter desired order numbers (1..N).")
+        orders = []
+        for i, name in enumerate(labels):
+            cols = st.columns([1, 6])
+            with cols[0]:
+                o = st.number_input(
+                    "Order", min_value=1, max_value=len(labels),
+                    value=i+1, key=f"ord_{key}_{i}", label_visibility="collapsed"
+                )
+            with cols[1]:
+                st.write(name)
+            orders.append((o, name))
+        orders.sort(key=lambda t: t[0])
+        return [name for _, name in orders]
+    return sort_labels
+
+sort_labels = _get_sort_labels_fn()
+
+# =====================================================
+# Helpers for cover page (kept from your working version)
+# =====================================================
 def hex_to_rgb01(hex_color: str):
     h = hex_color.strip().lstrip("#")
-    return int(h[0:2], 16)/255.0, int(h[2:4], 16)/255.0, int(h[4:6], 16)/255.0
+    r = int(h[0:2], 16) / 255.0
+    g = int(h[2:4], 16) / 255.0
+    b = int(h[4:6], 16) / 255.0
+    return r, g, b
 
-def fit_multiline_text(lines, font_name, bar_width, bar_height, side_pad=48, v_pad=18, max_pt=30, min_pt=14, leading_factor=1.12):
-    safe_w, safe_h = max(bar_width - 2*side_pad, 1), max(bar_height - 2*v_pad, 1)
-    caps = [safe_w / pdfmetrics.stringWidth(txt, font_name, 1.0) for txt in lines if txt]
+def fit_multiline_text(lines, font_name, bar_width, bar_height,
+                       side_pad=48, v_pad=18,
+                       max_pt=36, min_pt=14,
+                       leading_factor=1.12, letter_spacing=0.0):
+    safe_w = max(bar_width - 2*side_pad, 1)
+    safe_h = max(bar_height - 2*v_pad, 1)
+    caps = []
+    for txt in lines:
+        if not txt:
+            continue
+        base_w_at_1pt = pdfmetrics.stringWidth(txt, font_name, 1.0)
+        if base_w_at_1pt > 0:
+            caps.append(safe_w / base_w_at_1pt)
     width_cap = min(caps) if caps else max_pt
-    height_cap = (safe_h / ((len(lines) - 1) * leading_factor)) if len(lines) > 1 else max_pt
+    n = len(lines)
+    height_cap = (safe_h / ((n - 1) * leading_factor)) if n > 1 else max_pt
     size = max(min(width_cap, height_cap, max_pt), min_pt)
-    return [size] * len(lines), size * leading_factor
+    leading = size * leading_factor
+    return [size] * n, leading
 
-def draw_centered_stack(c, x_center, y_center, lines, sizes, font_name, color_rgb, leading=26):
-    if not lines: return
-    asc0 = (pdfmetrics.getAscent(font_name) / 1000.0) * sizes[0]
-    block_h = asc0 + (leading * (len(lines) - 1))
-    first_baseline_y = y_center + (block_h / 2.0) - asc0
+def draw_logo_centered_between_page_top_and_bar_top(c, logo_path, max_width, page_width, page_height, bar_top_y):
+    img = ImageReader(logo_path)
+    iw, ih = img.getSize()
+    scale = min(max_width / iw, 1.0)
+    w = iw * scale
+    h = ih * scale
+    x = (page_width - w) / 2.0
+    desired_center_y = (page_height + bar_top_y) / 2.0
+    y = desired_center_y - (h / 2.0)
+    y = min(y, page_height - h - 24)
+    c.drawImage(logo_path, x, y, width=w, height=h, preserveAspectRatio=True, mask='auto')
+    return h
+
+def draw_centered_stack(
+    c, x_center, y_center, lines, sizes, font_name, color_rgb, leading=26, letter_spacing=0.0, optical_adjust=0.0
+):
+    if not lines:
+        return
+    asc_u = pdfmetrics.getAscent(font_name) / 1000.0
+    des_u = abs(pdfmetrics.getDescent(font_name) / 1000.0)
+    asc0      = asc_u * sizes[0]
+    des_last  = des_u * sizes[-1]
+    interline = leading * (len(lines) - 1)
+    block_h = asc0 + interline + des_last
+    first_baseline_y = y_center + (block_h / 2.0) - asc0 + optical_adjust
+
     c.setFillColorRGB(*color_rgb)
     for i, (txt, sz) in enumerate(zip(lines, sizes)):
+        y = first_baseline_y - i * leading
         c.setFont(font_name, sz)
-        c.drawCentredString(x_center, first_baseline_y - i * leading, txt)
+        if letter_spacing and letter_spacing > 0:
+            n_gaps = max(len(txt) - 1, 0)
+            base_w = pdfmetrics.stringWidth(txt, font_name, sz)
+            w = base_w + letter_spacing * n_gaps
+            x_left = x_center - (w / 2.0)
+            t = c.beginText()
+            t.setTextOrigin(x_left, y)
+            t.setFont(font_name, sz)
+            try:
+                t.setCharSpace(letter_spacing)
+            except Exception:
+                pass
+            t.textLine(txt)
+            c.drawText(t)
+        else:
+            c.drawCentredString(x_center, y, txt)
 
-def make_cover_pdf(outfile, logo_path, project_name, project_location, party_label, party_name, date_prepared, bid_date, bid_date_tbc=False, bid_date_na=False):
+def format_mdY(d, blank="To Be Confirmed"):
+    if not d:
+        return blank
+    return f"{d.month}/{d.day}/{d.year}"
+
+def role_checkbox_group(key_prefix="role"):
+    roles = ["Contractor", "Engineer", "Distributor", "Utility"]
+    keys = [f"{key_prefix}_{r.lower()}" for r in roles]
+    def _set_only(this_key):
+        for k in keys:
+            if k != this_key:
+                st.session_state[k] = False
+    cols = st.columns(len(roles))
+    for r, k, col in zip(roles, keys, cols):
+        with col:
+            st.checkbox(r, key=k, on_change=_set_only, args=(k,))
+    for r, k in zip(roles, keys):
+        if st.session_state.get(k):
+            return r
+    return None
+
+def bid_date_picker_with_flags(label: str, key: str):
+    tbc_key, na_key = f"{key}_tbc", f"{key}_na"
+    def _on_tbc_change():
+        if st.session_state.get(tbc_key, False):
+            st.session_state[na_key] = False
+    def _on_na_change():
+        if st.session_state.get(na_key, False):
+            st.session_state[tbc_key] = False
+    disabled = st.session_state.get(tbc_key, False) or st.session_state.get(na_key, False)
+    date_val = st.date_input(label, key=f"{key}_date", disabled=disabled)
+    cols = st.columns(2)
+    with cols[0]:
+        st.checkbox("Bid Date To Be Confirmed", key=tbc_key, on_change=_on_tbc_change)
+    with cols[1]:
+        st.checkbox("Bid Date Not Applicable",  key=na_key,  on_change=_on_na_change)
+    tbc_state = st.session_state.get(tbc_key, False)
+    na_state  = st.session_state.get(na_key,  False)
+    if tbc_state or na_state:
+        date_val = None
+    return date_val, tbc_state, na_state
+
+def make_cover_pdf(
+    outfile: str,
+    logo_path: str,
+    project_name: str,
+    project_location: str,
+    party_label: str,
+    party_name: str,
+    date_prepared,
+    bid_date,
+    bid_date_tbc: bool = False,
+    bid_date_na: bool = False,
+):
     c = canvas.Canvas(outfile, pagesize=letter)
     width, height = letter
-    c.setLineWidth(1); c.setStrokeColorRGB(0.85, 0.85, 0.85)
-    c.rect(36, 36, width - 72, height - 72, stroke=1, fill=0)
-    bar_h, bar_y = 140, (height / 2.0) - 70
-    c.setFillColorRGB(188/255, 20/255, 27/255) # Jomar Red
-    c.rect(0, bar_y, width, bar_h, stroke=0, fill=1)
+
+    # Light gray inner border
+    border_inset = 36
+    c.setLineWidth(1)
+    c.setStrokeColorRGB(*hex_to_rgb01("#D9D9D9"))
+    c.rect(border_inset, border_inset, width - 2*border_inset, height - 2*border_inset, stroke=1, fill=0)
+
+    # Jomar Red bar
+    BAR_COLOR  = "#BC141B"
+    bar_rgb    = hex_to_rgb01(BAR_COLOR)
+    bar_height = 140
+    bar_y      = (height / 2.0) - (bar_height / 2.0)
+    bar_top_y  = bar_y + bar_height
+
+    c.setFillColorRGB(*bar_rgb)
+    c.setStrokeColorRGB(*bar_rgb)
+    c.rect(0, bar_y, width, bar_height, stroke=0, fill=1)
+
+    # Logo between page top and bar top
     if logo_path and os.path.exists(logo_path):
-        img = ImageReader(logo_path)
-        iw, ih = img.getSize()
-        scale = min(300 / iw, 1.0)
-        c.drawImage(logo_path, (width - iw*scale)/2, ((height + bar_y + bar_h)/2) - (ih*scale/2), width=iw*scale, height=ih*scale, preserveAspectRatio=True, mask='auto')
-    title_lines = [(project_name or "TO BE CONFIRMED").upper(), (project_location or "TO BE CONFIRMED").upper(), "SUBMITTAL PACKAGE"]
-    sizes, dyn_leading = fit_multiline_text(title_lines, FONT_TITLE, width, bar_h)
-    draw_centered_stack(c, width / 2.0, bar_y + bar_h / 2.0, title_lines, sizes, FONT_TITLE, (1, 1, 1), dyn_leading)
-    lines_bottom = [f"{(party_label or 'Recipient').upper()}: {(party_name or 'To Be Confirmed').upper()}", f"DATE PREPARED: {str(date_prepared).upper()}"]
-    if not bid_date_na: lines_bottom.append(f"BID DATE: {str(bid_date or 'To Be Confirmed').upper()}")
-    draw_centered_stack(c, width/2, 140, lines_bottom, [12]*len(lines_bottom), FONT_TEXT, (0,0,0), 18)
-    c.showPage(); c.save()
+        try:
+            draw_logo_centered_between_page_top_and_bar_top(
+                c, logo_path, max_width=300,
+                page_width=width, page_height=height, bar_top_y=bar_top_y
+            )
+        except Exception as e:
+            st.warning(f"Logo draw error: {e}")
+    else:
+        st.warning(f"Logo file not found at: {logo_path}")
+
+    # Title inside the bar (auto-scaling to fit)
+    title_lines = [
+        (project_name or "TO BE CONFIRMED").upper(),
+        (project_location or "TO BE CONFIRMED").upper(),
+        "SUBMITTAL PACKAGE",
+    ]
+    sizes, dyn_leading = fit_multiline_text(
+        lines=title_lines,
+        font_name=FONT_TITLE,
+        bar_width=width,
+        bar_height=bar_height,
+        side_pad=48,
+        v_pad=18,
+        max_pt=30,
+        min_pt=14,
+        leading_factor=1.12,
+        letter_spacing=0.0,
+    )
+    draw_centered_stack(
+        c,
+        x_center=width / 2.0,
+        y_center=bar_y + bar_height / 2.0,
+        lines=title_lines,
+        sizes=sizes,
+        font_name=FONT_TITLE,
+        color_rgb=(1, 1, 1),
+        leading=dyn_leading,
+    )
+
+    # Bottom centered lines
+    c.setFillColorRGB(0, 0, 0)
+    bottom_block_y = 140
+
+    role_label  = (party_label or "Recipient").upper()
+    company_txt = (party_name or "To Be Confirmed").upper()
+    first_line  = f"{role_label}: {company_txt}"
+
+    date_prep_txt = format_mdY(date_prepared, blank="To Be Confirmed").upper()
+
+    lines_bottom = [first_line, f"DATE PREPARED: {date_prep_txt}"]
+
+    if not bid_date_na:
+        if bid_date_tbc or not bid_date:
+            lines_bottom.append("BID DATE: TO BE CONFIRMED")
+        else:
+            lines_bottom.append(f"BID DATE: {format_mdY(bid_date).upper()}")
+
+    draw_centered_stack(
+        c,
+        x_center=width / 2.0,
+        y_center=bottom_block_y,
+        lines=lines_bottom,
+        sizes=[12] * len(lines_bottom),
+        font_name=FONT_TEXT,
+        color_rgb=(0, 0, 0),
+        leading=18,
+    )
+
+    c.showPage()
+    c.save()
 
 # =====================================================
-# App UI & Styling
+# App UI
 # =====================================================
-st.set_page_config(page_title="Jomar Valve Submittal Creator", layout="wide")
+st.set_page_config(page_title="Jomar Valve Submittal Package Creator", layout="wide")
 
+# --- Embed Proxima Nova font into the Streamlit UI (full coverage + silent fallback) ---
+font_path = Path(__file__).parent / "Proxima Nova Font.ttf"
+if font_path.exists():
+    with open(font_path, "rb") as f:
+        font_base64 = base64.b64encode(f.read()).decode()
+
+    st.markdown(f"""
+    <style>
+    @font-face {{
+        font-family: 'Proxima Nova';
+        src: url(data:font/ttf;base64,{font_base64}) format('truetype');
+    }}
+
+    /* --- Global Body & Text --- */
+    html, body, [class*="css"], .stApp, .stMarkdown, div, span, label, p, li, a {{
+        font-family: 'Proxima Nova', sans-serif !important;
+    }}
+
+    /* --- Sidebar --- */
+    section[data-testid="stSidebar"], .stSidebar, .stSidebar > div, .stSidebar p, .stSidebar header, .stSidebar h1, .stSidebar h2, .stSidebar h3 {{
+        font-family: 'Proxima Nova', sans-serif !important;
+    }}
+
+    /* --- Buttons, Inputs, Selects --- */
+    .stButton button, .stDownloadButton button, .stTextInput input,
+    .stSelectbox div[data-baseweb="select"], .stDateInput input, .stTextArea textarea {{
+        font-family: 'Proxima Nova', sans-serif !important;
+    }}
+
+    /* --- Headers & Subheaders --- */
+    h1, h2, h3, h4, h5, h6 {{
+        font-family: 'Proxima Nova', sans-serif !important;
+    }}
+
+    /* --- File uploader, expanders, checkboxes, etc. --- */
+    .stFileUploader label, .stExpander, .stExpander label, .stCheckbox label, .stRadio label {{
+        font-family: 'Proxima Nova', sans-serif !important;
+    }}
+    </style>
+    """, unsafe_allow_html=True)
+    
 st.markdown("""
 <style>
-    /* Jomar Red Theme */
-    :root { --primary-color: #BC141B; }
-    section[data-testid="stSidebar"] { background-color: #f9f9f9; }
-    .stButton>button { background-color: #BC141B !important; color: white !important; }
-    
-    /* Sortables Styling */
-    div[data-testid="sortable-item"] { 
-        background-color: #BC141B !important; 
-        color: white !important; 
-        border-radius: 4px !important; 
-        padding: 8px !important;
-        font-weight: 600 !important;
-    }
+/* Load Material Icons from Google Fonts (woff2) */
+@font-face {
+  font-family: 'Material Icons';
+  font-style: normal;
+  font-weight: 400;
+  src: url('https://fonts.gstatic.com/s/materialicons/v140/flUhRq6tzZclQEJ-Vdg-IuiaDsNc.woff2') format('woff2');
+  font-display: block;
+}
 
-    /* Small Sidebar Delete Buttons */
-    .sidebar-del-btn button {
-        height: 24px !important;
-        width: 24px !important;
-        padding: 0 !important;
-        font-size: 12px !important;
-        line-height: 24px !important;
-        border-radius: 50% !important;
-        background-color: #eee !important;
-        color: #BC141B !important;
-        border: 1px solid #ddd !important;
-    }
-    .sidebar-del-btn button:hover {
-        background-color: #BC141B !important;
-        color: white !important;
-    }
+/* Apply the Material Icons font properly */
+.material-icons,
+.material-icons-outlined,
+.material-icons-round,
+.material-icons-sharp,
+.material-icons-two-tone,
+span[data-testid="stIconMaterial"],
+button[data-testid="stSidebarCollapseButton"] span,
+button[aria-label="menu"] span {
+  font-family: 'Material Icons' !important;
+  font-feature-settings: 'liga' !important;
+  -webkit-font-feature-settings: 'liga' !important;
+  font-weight: normal !important;
+  font-style: normal !important;
+  font-size: 24px !important;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none !important;
+  white-space: nowrap;
+  display: inline-block;
+  vertical-align: middle;
+  color: #BC141B !important;
+}
+
+/* Jomar red hover effect */
+[data-testid="stSidebarCollapseButton"]:hover svg,
+[data-testid="stSidebarCollapseButton"]:hover span {
+  filter: brightness(0.6);
+}
+</style>
+""", unsafe_allow_html=True)
+st.markdown("""
+<style>
+/* ========== JOMAR COLOR THEME EXTENSIONS ========== */
+
+/* --- Sidebar background & text --- */
+section[data-testid="stSidebar"] {
+    background-color: #f9f9f9 !important; /* Light gray background */
+    color: #000000 !important;
+}
+/* --- Buttons (all Streamlit buttons) --- */
+.stButton>button, .stDownloadButton>button {
+    background-color: #BC141B !important;
+    color: white !important;
+    border-radius: 3px !important;
+    border: none !important;
+    font-weight: 400 !important;
+    transition: 0.25s ease-in-out;
+}
+/* --- Drag & Drop list items (Jomar Red theme) --- */
+div[data-testid="sortable-item"], 
+div[data-testid="sortable-container"] > div {
+    background-color: #BC141B !important;   /* Jomar red base */
+    border: 1px solid #BC141B !important;
+    border-radius: 3px !important;
+    color: white !important;                 /* white text for contrast */
+    padding: 6px 10px !important;
+    margin-bottom: 6px !important;
+    transition: all 0.2s ease-in-out;
+}
+
+/* Hover / focused */
+div[data-testid="sortable-item"]:hover {
+    background-color: #a11218 !important;   /* slightly darker red */
+    transform: scale(1.02);
+}
+
+/* Actively being dragged */
+div[data-rbd-draggable-id],
+div[data-rbd-drag-handle-context-id],
+div[draggable="true"] {
+    background-color: #BC141B !important;
+    border: 2px dashed #7e0d12 !important;
+    color: white !important;
+}
+
+/* Drop placeholder styling */
+div[data-rbd-placeholder-context-id] {
+    background-color: #BC141B22 !important; /* faint red transparency */
+    border-radius: 3px !important;
+}
+</style>
+""", unsafe_allow_html=True)
+st.markdown("""
+<style>
+/* 🔧 Force override Streamlit accent colors for draggable items */
+:root {
+    --primary-color: #BC141B !important;         /* global accent (buttons, sliders, etc.) */
+    --secondary-background-color: #fafafa !important;
+    --text-color: #000000 !important;
+}
+
+/* Explicitly target sortable item containers and internal drag states */
+div[data-testid="sortable-item"],
+div[data-testid="sortable-container"] > div,
+div[draggable="true"],
+div[data-rbd-drag-handle-context-id],
+div[data-rbd-draggable-id] {
+    background-color: #BC141B !important;
+    border: 1px solid #BC141B !important;
+    color: white !important;
+    border-radius: 3px !important;
+    transition: all 0.2s ease-in-out;
+}
+
+/* On hover or active drag */
+div[data-testid="sortable-item"]:hover,
+div[draggable="true"]:hover {
+    background-color: #a11218 !important;
+}
+
+/* Drop placeholder */
+div[data-rbd-placeholder-context-id] {
+    background-color: #BC141B33 !important;
+    border-radius: 3px !important;
+}
+</style>
+""", unsafe_allow_html=True)
+st.markdown("""
+<style>
+/* --- Catalog product styling --- */
+.model-entry {
+    font-family: 'Proxima Nova', sans-serif !important;
+    color: #000000 !important;
+    text-decoration: none !important;
+    line-height; 1.4em; !important;
+    margin-bottom: 8px !important;
+}
+.model-entry strong {
+    font-weight: 600;
+    font-size: 1.05rem;
+}
+.model-entry .model-desc {
+    color: #444444 !important;
+    font-size: 0.9rem;
+}
+</style>
+""", unsafe_allow_html=True)
+st.markdown("""
+<style>
+/* --- Style the "No items selected yet." info box --- */
+div[data-testid="stNotificationContentInfo"],
+div[data-baseweb="notification"] {
+    background-color: #f9f9f9 !important;   /* Match sidebar background */
+    color: #000000 !important;              /* Black text */
+    border: 1px solid #d3d3d3 !important;   /* Thin darker gray border */
+    border-radius: 5px !important;
+    box-shadow: none !important;            /* Remove Streamlit's blue shadow */
+}
+</style>
+""", unsafe_allow_html=True)
+st.markdown("""
+<style>
+/* ---- Gray theme for catalog "Add" buttons only ---- */
+
+/* Match Streamlit catalog section by proximity to the main area */
+div[data-testid="stHorizontalBlock"] div.stButton > button {
+    background-color: #f9f9f9 !important;   /* same light gray as info box */
+    color: #000000 !important;              /* black text */
+    border: 1px solid #d3d3d3 !important;   /* light gray border */
+    border-radius: 5px !important;
+    font-weight: 500 !important;
+    font-family: "Proxima Nova", sans-serif !important;
+    box-shadow: none !important;
+    transition: all 0.2s ease-in-out !important;
+}
+
+/* Hover effect */
+div[data-testid="stHorizontalBlock"] div.stButton > button:hover {
+    background-color: #e8e8e8 !important;
+    border-color: #c0c0c0 !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
-# --- Session State ---
-st.session_state.setdefault("queue", [])
+# --- Layout for header + logo ---
+col1, col2 = st.columns([3, 1], vertical_alignment="center")
 
-# --- Layout Header ---
-c1, c2 = st.columns([3, 1], vertical_alignment="center")
-with c1:
-    st.markdown('<h1 style="margin-top:-6rem;">JOMAR VALVE SUBMITTAL PACKAGE CREATOR</h1>', unsafe_allow_html=True)
-with c2:
-    if Path(default_logo_path).exists():
-        st.image(default_logo_path, width=200)
+with col1:
+    st.markdown(
+        """
+        <div style="
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding-right: 1rem;
+            margin-top: -7.5rem;  /* pull header upward */
+        ">
+            <h1 style="margin-bottom: 0; font-size: 2.4rem; line-height: 1.2;">
+                JOMAR VALVE SUBMITTAL PACKAGE CREATOR
+            </h1>
+            <p style="margin-top: 6px; font-size: 1.1rem; line-height: 1.4;">
+                Upload PDFs and/or select from below catalog, reorder in the sidebar, and generate a combined PDF with a custom cover.
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-# ---------------- Sidebar: Queue & Management ----------------
-with st.sidebar:
-    st.markdown("### Selected Spec Sheets")
-
-    def _get_lbl(obj):
-        if isinstance(obj, dict): return obj.get("Model", "Unknown")
-        return os.path.splitext(getattr(obj, "name", "File"))[0]
-
-    if not st.session_state.queue:
-        st.info("No items selected.")
+with col2:
+    logo_path = Path(__file__).parent / "Jomar Valve Logo Red.png"
+    if logo_path.exists():
+        st.markdown(
+            f"""
+            <div style="
+                display: flex;
+                align-items: center;         /* vertical centering */
+                justify-content: flex-end;   /* push logo to the right edge */
+                height: 100%;                /* match column height */
+                margin-top: -7.5rem;         /* align with header shift */
+            ">
+                <img src="data:image/png;base64,{base64.b64encode(open(logo_path, 'rb').read()).decode()}"
+                     alt="Jomar Valve Logo"
+                     style="max-width: 100%; height: auto;"/>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
     else:
-        # 1. DRAG AND DROP (The Red Boxes)
-        st.markdown("**Click & Drag to Reorder:**")
-        raw_labels = [_get_lbl(x) for x in st.session_state.queue]
-        # We add a hidden index to handle duplicate model names
-        indexed_labels = [f"{lbl} ##{i}" for i, lbl in enumerate(raw_labels)]
-        
-        sorted_indexed = sort_items(indexed_labels, direction="vertical", key=f"sort_{len(st.session_state.queue)}")
-        
-        # Check for reorder
-        if sorted_indexed != indexed_labels:
-            new_queue = []
-            for lab in sorted_indexed:
-                idx = int(lab.split("##")[-1])
-                new_queue.append(st.session_state.queue[idx])
-            st.session_state.queue = new_queue
-            st.rerun()
+        st.warning("⚠️ Jomar logo not found.")
 
-        # 2. DELETE SECTION (Right below the red boxes)
-        st.markdown("---")
-        st.markdown("**Remove Items:**")
-        for i, item in enumerate(list(st.session_state.queue)):
-            col_txt, col_btn = st.columns([5, 1])
-            col_txt.markdown(f"<p style='font-size:0.85rem; margin-top:4px;'>{_get_lbl(item)}</p>", unsafe_allow_html=True)
-            with col_btn:
-                st.markdown('<div class="sidebar-del-btn">', unsafe_allow_html=True)
-                if st.button("X", key=f"del_{i}"):
-                    st.session_state.queue.pop(i)
-                    if "generated_pdf" in st.session_state: del st.session_state["generated_pdf"]
-                    st.rerun()
-                st.markdown('</div>', unsafe_allow_html=True)
+# Resolve app dir + default logo path (next to this file)
+APP_DIR = Path(__file__).parent
+LOGO_FILENAME = "Jomar Valve Logo Red.png"  # update if your file name differs
+default_logo_path = str(APP_DIR / LOGO_FILENAME)
+
+# ---------------- Session State ----------------
+st.session_state.setdefault("queue", [])     # list of file-like objects; each must have .name
+st.session_state.setdefault("uploads", [])   # keep track of uploaded files separately (optional)
+st.session_state.setdefault("selected_category", None)
+st.session_state.setdefault("selected_subcategory", None)
+
+# ---------------- Cover Page Inputs (must be BEFORE the sidebar) ----------------
+st.markdown("---")
+st.subheader("COVER PAGE")
+
+# 1) Role (mutually exclusive) — store a string like "Contractor"/"Engineer"/...
+selected_role = role_checkbox_group(key_prefix="aud")
+st.session_state["selected_role"] = selected_role  # can be None if not yet chosen
+
+# 2) Company / Project text inputs (keys ensure values live in session_state)
+party_name = st.text_input("Company", st.session_state.get("party_name", ""), key="party_name")
+project_name = st.text_input("Project Name", st.session_state.get("project_name", ""), key="project_name")
+project_location = st.text_input("Project Location", st.session_state.get("project_location", ""), key="project_location")
+
+# 3) Date Prepared (simple date)
+date_prepared = st.date_input("Date Prepared", key="date_prepared")
+
+# 4) Bid Date with flags; write all three explicitly into session_state
+bd_date, bd_tbc, bd_na = bid_date_picker_with_flags("Bid Date", key="bd")
+st.session_state["bid_date"] = bd_date
+st.session_state["bid_date_tbc"] = bd_tbc
+st.session_state["bid_date_na"] = bd_na
+
+# ---------------- Sidebar: Queue ----------------
+with st.sidebar:
+    st.markdown("Selected Spec Sheets")
+
+    # ---- Build display list from QUEUE ONLY ----
+    def _item_label(obj):
+        # Catalog item (dict)
+        if isinstance(obj, dict) and "Model" in obj:
+            return str(obj["Model"]).strip()
+        # Uploaded/Downloaded file object
+        name = getattr(obj, "name", "")
+        return os.path.splitext(name)[0].strip() if name else ""
+
+    labels = [_item_label(x) for x in st.session_state.queue if _item_label(x)]
+    labels = [f"{lbl}" for lbl in labels]  # add handle
+
+    if not labels:
+        st.info("No items selected yet.")
+    else:
+        st.markdown("Click & Drag to Reorder")
+
+        list_key = f"queue_sort_{len(labels)}"
+        sorted_items = sort_items(labels, direction="vertical", key=list_key)
+
+        # ---- Rebuild queue in the new order (no duplicates) ----
+        new_names = [s.replace("", "").strip() for s in sorted_items]
+
+        # Make a consumable pool from the current queue so duplicates (if any) keep stability
+        pool = st.session_state.queue[:]
+
+        def _match_and_pop(name, pool_list):
+            for i, obj in enumerate(pool_list):
+                if _item_label(obj) == name:
+                    return pool_list.pop(i)
+            return None
+
+        new_queue = []
+        for nm in new_names:
+            matched = _match_and_pop(nm, pool)
+            if matched is not None:
+                new_queue.append(matched)
+
+        unique_seen = set()
+        deduped_queue = []
+        for f in st.session_state.queue:
+            name = getattr(f, "name", "")
+            if name not in unique_seen:
+                deduped_queue.append(f)
+                unique_seen.add(name)
+        st.session_state.queue = deduped_queue
+
+        st.session_state.queue = new_queue
+
 
     st.markdown("---")
-    if st.button("Clear All", use_container_width=True):
-        st.session_state.queue = []; st.rerun()
+    if st.button("Clear All Files", use_container_width=True):
+        st.session_state.queue.clear()
+        st.session_state.uploads.clear()
+        st.toast("All Files Cleared")
+        st.rerun()
 
-    if st.session_state.queue:
-        if st.button("Create Package", type="primary", use_container_width=True):
-            with st.spinner("Building PDF..."):
-                tmp_c = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
-                make_cover_pdf(tmp_c.name, default_logo_path, st.session_state.get("proj_n"), st.session_state.get("proj_l"), 
-                               st.session_state.get("role"), st.session_state.get("comp"), st.session_state.get("d_prep"), 
-                               st.session_state.get("bd_date"), False, st.session_state.get("bd_na"))
+    # --- Spacer to push create/download to bottom ---
+    st.markdown(
+        """
+        <div style="flex-grow:1; height:320px;"></div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # --- Create + Download buttons at bottom ---
+    st.markdown("---")
+    if st.session_state.queue or st.session_state.uploads:
+        create_btn = st.button("Create Submittal Package", type="primary", use_container_width=True)
+        if create_btn:
+            with st.spinner("Creating Submittal Package..."):
+                cover_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+                project_name = st.session_state.get("project_name", "").strip()
+                project_location = st.session_state.get("project_location", "").strip()
+                party_name = st.session_state.get("party_name", "").strip()
+                selected_role = st.session_state.get("selected_role", "")
+                date_prepared = st.session_state.get("date_prepared")
+                bid_date = st.session_state.get("bid_date")
+                bid_date_tbc = st.session_state.get("bid_date_tbc", False)
+                bid_date_na = st.session_state.get("bid_date_na", False)
+                
+                make_cover_pdf(
+                    cover_tmp.name,
+                    logo_path=default_logo_path,
+                    project_name=project_name,
+                    project_location=project_location,
+                    party_label=selected_role,
+                    party_name=party_name,
+                    date_prepared=date_prepared,
+                    bid_date=bid_date,
+                    bid_date_tbc=bid_date_tbc,
+                    bid_date_na=bid_date_na,
+                )
                 merger = PdfMerger()
-                merger.append(tmp_c.name)
+                merger.append(cover_tmp.name)
                 for f in st.session_state.queue:
-                    f.seek(0); merger.append(f)
+                    try:
+                        merger.append(f)
+                    except Exception as e:
+                        st.warning(f"Could not add {getattr(f, 'name', 'file')}: {e}")
+
                 out_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
-                merger.write(out_tmp.name); merger.close()
-                with open(out_tmp.name, "rb") as f: st.session_state["generated_pdf"] = f.read()
-                st.toast("✅ Created!")
+                merger.write(out_tmp.name)
+                merger.close()
+
+                with open(out_tmp.name, "rb") as f:
+                    st.session_state["generated_pdf"] = f.read()
+
+                st.toast("✅ Submittal Package Created Successfully")
 
         if "generated_pdf" in st.session_state:
-            st.download_button("Download PDF", data=st.session_state["generated_pdf"], file_name="Jomar_Submittal.pdf", use_container_width=True)
+            st.download_button(
+                "Download Submittal Package",
+                data=st.session_state["generated_pdf"],
+                file_name="Jomar Valve Submittal Package.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
+# ---------------- Uploader ----------------
+st.subheader("UPLOAD FILES")
 
-# ---------------- Main Page: Inputs & Catalog ----------------
-st.subheader("COVER PAGE DETAILS")
-# (Simple input mapping for brevity)
-st.session_state["role"] = st.radio("Recipient Role", ["Contractor", "Engineer", "Distributor", "Utility"], horizontal=True)
-st.session_state["comp"] = st.text_input("Company Name")
-st.session_state["proj_n"] = st.text_input("Project Name")
-st.session_state["proj_l"] = st.text_input("Project Location")
-st.session_state["d_prep"] = st.date_input("Date Prepared", datetime.now())
-st.session_state["bd_na"] = st.checkbox("No Bid Date")
+uploaded_files = st.file_uploader(
+    "Add PDF Files to appear in the submittal package):",
+    type="pdf",
+    accept_multiple_files=True
+)
 
-st.markdown("---")
-st.subheader("UPLOAD PDFS")
-up = st.file_uploader("Upload additional spec sheets", type="pdf", accept_multiple_files=True)
-if up:
-    for f in up:
-        if f.name not in [getattr(x, 'name', '') for x in st.session_state.queue]:
+if uploaded_files:
+    existing = {(getattr(f, "name", ""), getattr(f, "size", None)) for f in st.session_state.queue}
+    new_count = 0
+    
+    for f in uploaded_files:
+        key = (f.name, getattr(f, "size", None))
+        if key not in existing:
             st.session_state.queue.append(f)
-    st.rerun()
+            st.session_state.uploads.append(f)
+            existing.add(key)
+            new_count += 1
+            
+    if new_count:
+        st.success(f"✓ Added {new_count} uploaded file(s) to queue.")
+        st.rerun()
 
+# ---------------- Catalog View ----------------
 st.markdown("---")
 st.subheader("SPEC SHEET LIBRARY")
+
+EXCEL_PATH = "spec_links_images.xlsx"
+
+@st.cache_data(show_spinner=False, ttl=600)
+def load_library(xlsx_path):
+    df = pd.read_excel(xlsx_path)
+    expected = {"Category","Subcategory","Model","Description","URL","Image"}
+    missing = [c for c in expected if c not in df.columns]
+    if missing:
+        raise ValueError(f"Missing columns in Excel: {missing}")
+    return df.dropna(subset=["Model","URL"]).copy()
+
+@st.cache_data(show_spinner=False)
+def fetch_pdf_cached(url: str) -> bytes | None:
+    session = create_session_with_retries(retries=5, backoff_factor=1.5)
+    resp = session.get(url, timeout=(10, 45))
+    resp.raise_for_status()
+    return resp.content
+
 try:
-    df = pd.read_excel("spec_links_images.xlsx").dropna(subset=["Model", "URL"])
-    cat = st.selectbox("Category", sorted(df["Category"].unique()))
-    filtered = df[df["Category"] == cat]
-    
-    for _, row in filtered.iterrows():
-        c1, c2 = st.columns([1, 4])
-        with c1: st.image(row["Image"], width=100) if pd.notnull(row["Image"]) else st.write("No Image")
-        with c2:
-            st.markdown(f"**{row['Model']}**\n\n{row['Description']}")
-            if st.button(f"Add {row['Model']}", key=f"add_{row['Model']}"):
-                target = f"{row['Model']}.pdf"
-                if target not in [getattr(x, 'name', '') for x in st.session_state.queue]:
-                    b = fetch_pdf_cached(row["URL"])
-                    f = BytesIO(b); f.name = target
-                    st.session_state.queue.append(f); st.rerun()
+    library = load_library(EXCEL_PATH)
 except Exception as e:
-    st.info("Please ensure 'spec_links_images.xlsx' is present.")
+    st.error(f"Unable to load Excel: {e}")
+    st.stop()
+
+
+cols = st.columns(2)
+with cols[0]:
+    categories = sorted(library["Category"].dropna().unique())
+    category = st.selectbox(
+        "Category",
+        categories,
+        index=categories.index(st.session_state.selected_category)
+        if st.session_state.selected_category in categories else 0,
+    )
+    st.session_state.selected_category = category
+
+with cols[1]:
+    sub_df = library[library["Category"] == category]
+    subcategories = sorted(sub_df["Subcategory"].dropna().unique())
+    subcategory = st.selectbox(
+        "Subcategory",
+        subcategories,
+        index=subcategories.index(st.session_state.selected_subcategory)
+        if st.session_state.selected_subcategory in subcategories else 0,
+    )
+    st.session_state.selected_subcategory = subcategory
+
+filtered = library[(library["Category"] == category) & (library["Subcategory"] == subcategory)]
+
+if filtered.empty:
+    st.info("No products found for this selection.")
+else:
+    for _, row in filtered.iterrows():
+        c1, c2 = st.columns([1, 3])
+        with c1:
+            try:
+                st.image(row["Image"], width=110)
+            except Exception:
+                st.write("No image")
+        with c2:
+            model = str(row["Model"])
+            url   = str(row["URL"])
+            desc  = str(row.get("Description", "") or "")
+            st.markdown(
+                f"""
+                <div class="model-entry">
+                    <strong>{model}</strong><br>
+                    <span class="model-desc">{desc}</span>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+            add_key = f"add::{category}::{subcategory}::{model}"
+            if st.button(f"Add {model}", key=add_key):
+                # Deduplicate by filename
+                target_name = f"{model}.pdf"
+                queue_names = {getattr(f, "name", "") for f in st.session_state.queue}
+                if target_name in queue_names:
+                    st.toast(f"{model} is already in the queue.", icon="⚠️")
+                else:
+                    try:
+                        # Download using cache (with retries automatically inside)
+                        pdf_bytes = fetch_pdf_cached(url)
+                        if pdf_bytes:
+                            fobj = BytesIO(pdf_bytes)
+                            fobj.name = target_name
+                            st.session_state.queue.append(fobj)
+                            st.toast(f"✓ Added {model} to queue", icon="✅")
+                            st.rerun()
+                        else:
+                            st.warning(f"⚠️ Could not fetch {model} — the link may be offline or too slow.")
+                    except requests.exceptions.ConnectTimeout:
+                        st.warning(f"⚠️ Connection to {url} timed out: Please try again later.")
+                    except requests.exceptions.ReadTimeout:
+                        st.warning(f"⚠️ Download from {url} took too long: Please try again later.")
+                    except requests.exceptions.RequestException as e:
+                        st.warning(f"⚠️ Network error while fetching {model}: {e}")
+                    except Exception as e:
+                        st.warning(f"Could not add {model}: {e}")
