@@ -1,25 +1,51 @@
-name: Streamlit Keep Alive
+name: Keep Jomar App Awake
+
 on:
-  workflow_dispatch:  # <--- THIS IS THE BUTTON POWER
   schedule:
-    - cron: '0 */12 * * *'
+    - cron: '0 */3 * * *'
+  workflow_dispatch: 
 
 jobs:
-  keep-alive:
+  ping:
     runs-on: ubuntu-latest
-    # This permission is REQUIRED to push the heartbeat file
-    permissions:
-      contents: write
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Create Heartbeat
+      - name: Install Playwright
         run: |
-          echo "Last heartbeat: $(date)" > heartbeat.txt
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          git add heartbeat.txt
-          git commit -m "Keep-alive nudge [skip ci]" || echo "No changes to commit"
-          git push
-    driver.quit()
+          npm install -g playwright
+          npx playwright install chromium --with-deps
+
+      - name: High-Intensity Ping
+        run: |
+          npx playwright codegen --target python -o /dev/null
+          python3 - <<EOF
+          from playwright.sync_api import sync_playwright
+          import time
+
+          with sync_playwright() as p:
+              # Launching a real, modern browser
+              browser = p.chromium.launch(headless=True)
+              page = browser.new_page(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+              
+              print("Opening Jomar Submittal Builder...")
+              page.goto("https://jomar-submittal-builder.streamlit.app/", wait_until="networkidle")
+              
+              # If there is a 'Wake up' button, this clicks it automatically
+              if page.get_by_role("button", name="Wake up").is_visible():
+                  print("Found sleep screen. Clicking Wake Up...")
+                  page.get_by_role("button", name="Wake up").click()
+                  page.wait_for_load_state("networkidle")
+
+              # Simulate some human interaction
+              page.mouse.wheel(0, 500)
+              time.sleep(2)
+              page.mouse.wheel(0, -500)
+              
+              print("Staying active for 60 seconds to lock in the session...")
+              time.sleep(60) 
+              
+              print(f"App is active. Title: {page.title()}")
+              browser.close()
+          EOF
