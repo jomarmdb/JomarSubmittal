@@ -1,0 +1,25 @@
+name: Streamlit Keep Alive
+on:
+  workflow_dispatch:  # <--- THIS IS THE BUTTON POWER
+  schedule:
+    - cron: '0 */12 * * *'
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    # This permission is REQUIRED to push the heartbeat file
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Create Heartbeat
+        run: |
+          echo "Last heartbeat: $(date)" > heartbeat.txt
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add heartbeat.txt
+          git commit -m "Keep-alive nudge [skip ci]" || echo "No changes to commit"
+          git push
+    driver.quit()
